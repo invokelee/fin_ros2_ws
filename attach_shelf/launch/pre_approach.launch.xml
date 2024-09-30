@@ -1,0 +1,11 @@
+<launch>
+
+    <arg name="obstacle" default="0.9"/>
+    <arg name="degrees" default="90"/>
+
+    <node pkg="attach_shelf" exec="pre_approach_node" name="pre_approach_node">
+        <param name="obstacle" value="$(var obstacle)"/>
+        <param name="degrees" value="$(var degrees)"/>
+    </node>
+
+</launch>

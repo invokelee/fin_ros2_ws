@@ -1,0 +1,15 @@
+UID        PID  PPID  C STIME TTY          TIME CMD
+user         1     0  0 07:07 ?        00:00:00 /bin/bash -c sudo ln -sfv /home/simulations /home/robox; sudo rm -f /opt/ros/crystal /opt/ros/latest; sudo ln -sfv /opt/ros/dashing /opt/ros/crystal; history -c ; history -w ; sudo ln -sfv /home/simulations/public_sim_ws/orb_slam2_tc /home/simulations/public_sim_ws/src/all/; sudo ln -sfv /opt/ros/humble/ /opt/ros/latest && link_models.sh & source /usr/local/share/shell/.nvm/nvm.sh && nvm run 8.17.0 /usr/local/share/shell/demo/app.js
+user        15     1  0 07:07 ?        00:00:00 /bin/bash -c sudo ln -sfv /home/simulations /home/robox; sudo rm -f /opt/ros/crystal /opt/ros/latest; sudo ln -sfv /opt/ros/dashing /opt/ros/crystal; history -c ; history -w ; sudo ln -sfv /home/simulations/public_sim_ws/orb_slam2_tc /home/simulations/public_sim_ws/src/all/; sudo ln -sfv /opt/ros/humble/ /opt/ros/latest && link_models.sh & source /usr/local/share/shell/.nvm/nvm.sh && nvm run 8.17.0 /usr/local/share/shell/demo/app.js
+user        18    15  0 07:07 ?        00:00:00 /bin/bash /usr/bin/link_models.sh
+user       386     1  1 07:07 ?        00:00:04 node /usr/local/share/shell/demo/app.js
+user       510   386  0 07:07 pts/0    00:00:00 bash
+user       514   386  0 07:07 pts/1    00:00:00 bash
+user       518   386  0 07:07 pts/2    00:00:00 bash
+user       520   386  0 07:07 pts/3    00:00:00 bash
+user      1163   510  1 07:10 pts/0    00:00:02 /usr/bin/python3 /opt/ros/humble/bin/ros2 launch map_server map_server.launch.py map_file:=warehouse_map_real.yaml
+user      1172  1163 67 07:10 pts/0    00:01:23 /opt/ros/humble/lib/rviz2/rviz2 -d /home/user/ros2_ws/install/map_server/share/map_server/rviz/mapper_rviz_config.rviz --ros-args -r __node:=rviz2
+user      1174  1163  0 07:10 pts/0    00:00:00 /opt/ros/humble/lib/nav2_map_server/map_server --ros-args -r __node:=map_server --params-file /tmp/launch_params_cwvnll92
+user      1176  1163  0 07:10 pts/0    00:00:00 /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args -r __node:=lifecycle_manager_mapper --params-file /tmp/launch_params_te8chye4 --params-file /tmp/launch_params_ztdljlbr
+user      1425    18  0 07:12 ?        00:00:00 sleep 5
+user      1426   514  0 07:12 pts/1    00:00:00 ps -ef
