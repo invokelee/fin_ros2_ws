@@ -1,12 +1,12 @@
 amcl:
   ros__parameters:
-    # use_sim_time: True
+    use_sim_time: False
     alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2
     alpha4: 0.2
     alpha5: 0.2
-    base_frame_id: "robot_base_footprint"
+    base_frame_id: "base_link"
     beam_skip_distance: 0.5
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
@@ -20,7 +20,7 @@ amcl:
     max_beams: 60
     max_particles: 8000
     min_particles: 200
-    odom_frame_id: "robot_odom"
+    odom_frame_id: "odom"
     pf_err: 0.05
     pf_z: 0.99
     recovery_alpha_fast: 0.0
@@ -38,7 +38,7 @@ amcl:
     z_max: 0.05
     z_rand: 0.5
     z_short: 0.05
-    scan_topic: "scan"
+    scan_topic: "cleaner_2/scan"
     map_topic: "/map"
     set_initial_pose: true
     initial_pose:
@@ -46,10 +46,10 @@ amcl:
       y: -0.069 
       yaw: -0.015
 
-# amcl_map_client:
-#   ros__parameters:
-#     use_sim_time: True
+amcl_map_client:
+  ros__parameters:
+    use_sim_time: False
 
-# amcl_rclcpp_node:
-#   ros__parameters:
-#     use_sim_time: True
+amcl_rclcpp_node:
+  ros__parameters:
+    use_sim_time: False

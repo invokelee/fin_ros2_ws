@@ -13,19 +13,12 @@ def generate_launch_description():
                  )
     run_env_f  = LaunchConfiguration('target')
 
-    real_planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/planner_server.yaml')
     sim_planner_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/planner_server.yaml')
-    real_controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/controller.yaml')
     sim_controller_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/controller.yaml')
-    real_bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/bt.yaml')
     sim_bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/bt.yaml')
-    real_recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/recovery.yaml')
     sim_recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/recovery.yaml')
-    real_filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/filters.yaml')
     sim_filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/filters.yaml')
-
-    rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'pathplanning.rviz')
-    # rviz_file = "/home/user/rviz2_configs/nav2.rviz"
+    sim_rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'pathplanning.rviz')
 
     sim_filter_mask_server_node = Node(
         package='nav2_map_server',
@@ -34,15 +27,6 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
         parameters=[sim_filters_yaml]
-    )
-
-    real_filter_mask_server_node = Node(
-        package='nav2_map_server',
-        executable='map_server',
-        name='filter_mask_server',
-        output='screen',
-        emulate_tty=True,
-        parameters=[real_filters_yaml]
     )
 
     sim_costmap_filter_info_server_node = Node(
@@ -54,35 +38,11 @@ def generate_launch_description():
         parameters=[sim_filters_yaml]
     )
 
-    real_costmap_filter_info_server_node = Node(
-        package='nav2_map_server',
-        executable='costmap_filter_info_server',
-        name='costmap_filter_info_server',
-        output='screen',
-        emulate_tty=True,
-        parameters=[real_filters_yaml]
-    )
-
-    real_nav2_planner_node = Node(
-        package='nav2_planner',
-        executable='planner_server',
-        name='planner_server',
-        parameters=[real_planner_yaml]
-    )
-
     sim_nav2_planner_node = Node(
         package='nav2_planner',
         executable='planner_server',
         name='planner_server',
         parameters=[sim_planner_yaml]
-    )
-
-    real_nav2_controller_node = Node(
-        package='nav2_controller',
-        executable='controller_server',
-        name='controller_server',
-        output='screen',
-        parameters=[real_controller_yaml]
     )
 
     sim_nav2_controller_node = Node(
@@ -94,28 +54,12 @@ def generate_launch_description():
         remappings=[('cmd_vel', 'diffbot_base_controller/cmd_vel_unstamped')]
     )
 
-    real_nav2_bt_navigator_node = Node(
-        package='nav2_bt_navigator',
-        executable='bt_navigator',
-        name='bt_navigator',
-        output='screen',
-        parameters=[real_bt_navigator_yaml]
-    )
-
     sim_nav2_bt_navigator_node = Node(
         package='nav2_bt_navigator',
         executable='bt_navigator',
         name='bt_navigator',
         output='screen',
         parameters=[sim_bt_navigator_yaml]
-    )
-
-    real_nav2_recoveries_node = Node(
-        package='nav2_behaviors',
-        executable='behavior_server',
-        name='behavior_server',
-        output='screen',
-        parameters=[real_recovery_yaml]
     )
 
     sim_nav2_recoveries_node = Node(
@@ -125,23 +69,6 @@ def generate_launch_description():
         output='screen',
         parameters=[sim_recovery_yaml],
         remappings=[('cmd_vel', 'diffbot_base_controller/cmd_vel_unstamped')]
-    )
-
-    real_lifecycle_manager_node = Node(
-        package='nav2_lifecycle_manager',
-        executable='lifecycle_manager',
-        output='screen',
-        name='lifecycle_manager_pathplanner',
-        parameters=[{'autostart': True},
-                    {'bond_timeout':0.0},
-                    {'node_names': ['planner_server', 
-                                    'controller_server', 
-                                    'bt_navigator', 
-                                    'behavior_server',
-                                    'filter_mask_server',
-                                    'costmap_filter_info_server'
-                                    ]}
-                    ]
     )
 
     sim_lifecycle_manager_node = Node(
@@ -179,7 +106,7 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         output='screen',
-        arguments=["-d ", rviz_file]
+        arguments=["-d ", sim_rviz_file]
     )
 
     return LaunchDescription(
@@ -198,19 +125,6 @@ def generate_launch_description():
                     sim_costmap_filter_info_server_node,
                     sim_lifecycle_manager_node
                 ]
-            ),
-            GroupAction(
-                condition=LaunchConfigurationEquals('target', 'real'),
-                actions = [
-                    real_nav2_planner_node,
-                    real_nav2_controller_node,
-                    real_nav2_bt_navigator_node,
-                    real_nav2_recoveries_node,
-                    real_filter_mask_server_node,
-                    real_costmap_filter_info_server_node,
-                    real_lifecycle_manager_node
-                ]
             )
-
         ]
     )

@@ -32,6 +32,22 @@ def generate_launch_description():
         arguments=['-resolution', '0.05', '-publish_period_sec', '1.0']
     )
 
+# for testing
+    base_laser_sensor_link_tf_publisher_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        output='screen',
+        name='base_laser_broadcaster_node',
+        # namespace='/cleaner_2',
+        parameters=[{'use_sim_time': True}],
+        arguments=['0.103007', '0', '0.17', '0', '0',
+                       '0', '1', 'robot_base_link', 'laser_sensor_link'],
+        # remappings=[
+        #     ('/tf', '/cleaner_2/tf'),
+        #     ('/tf_static', '/cleaner_2/tf_static' ),
+        # ],
+    )
+
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -43,6 +59,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             rviz_node,
+            # base_laser_sensor_link_tf_publisher_node,
             cartographer_node,
             occupancy_grid_node
         ]

@@ -15,21 +15,8 @@ def generate_launch_description():
     map_file_f = LaunchConfiguration('map_file')
 
     map_file_path  = PathJoinSubstitution([get_package_share_directory('cartographer_slam'), 'config', map_file_f])
-    nav2_yaml_real = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config_real.yaml')
     nav2_yaml_sim = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config_sim.yaml')
-    # rviz_file = os.path.join(get_package_share_directory('localization_server'), 'rviz', 'localizer_rviz_config.rviz')
-    rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'pathplanning.rviz')
-    # rviz_file = "/home/user/rviz2_configs/nav2.rviz"
-
-    real_map_server_node = Node(
-        package='nav2_map_server',
-        executable='map_server',
-        name='map_server',
-        output='screen',
-        parameters=[
-                    {'yaml_filename' : map_file_path}
-                   ]
-    )
+    rviz_file_sim = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'pathplanning.rviz')
 
     sim_map_server_node = Node(
         package='nav2_map_server',
@@ -40,31 +27,12 @@ def generate_launch_description():
                     {'yaml_filename' : map_file_path}]
     )
 
-    real_amcl_node = Node(
-        package='nav2_amcl',
-        executable='amcl',
-        name='amcl',
-        output='screen',
-        parameters=[nav2_yaml_real]
-    )
-
     sim_amcl_node = Node(
         package='nav2_amcl',
         executable='amcl',
         name='amcl',
         output='screen',
         parameters=[nav2_yaml_sim]
-    )
-
-    real_lifecycle_manager_node = Node(
-        package='nav2_lifecycle_manager',
-        executable='lifecycle_manager',
-        output='screen',
-        name='lifecycle_manager_localization',
-        parameters=[
-                    {'autostart': True},
-                    {'bond_timeout':0.0},
-                    {'node_names': ['map_server', 'amcl']}]
     )
 
     sim_lifecycle_manager_node = Node(
@@ -78,18 +46,18 @@ def generate_launch_description():
                         {'node_names': ['map_server', 'amcl']}]
     )
 
-    rviz_node = Node(
+    rviz_node_sim = Node(
         package='rviz2',
         executable='rviz2',
         name='rviz2',
         output='screen',
-        arguments=["-d", rviz_file]
+        arguments=["-d", rviz_file_sim]
     )
 
     return LaunchDescription(
         [
-            rviz_node,
             map_file_arg,
+            rviz_node_sim,
             GroupAction(
                 condition=LaunchConfigurationEquals('map_file', 'sim_cafe_area.yaml'),
                 actions = [
@@ -98,13 +66,5 @@ def generate_launch_description():
                     sim_lifecycle_manager_node
                 ]
             ),
-            GroupAction(
-                condition=LaunchConfigurationEquals('map_file', 'real_cafe_area.yaml'),
-                actions = [
-                    real_map_server_node,
-                    real_amcl_node,
-                    real_lifecycle_manager_node
-                ]
-            )
         ]
     )

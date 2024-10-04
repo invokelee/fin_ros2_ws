@@ -1,6 +1,6 @@
 controller_server:
   ros__parameters:
-    # use_sim_time: True
+    use_sim_time: False
     controller_frequency: 5.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
@@ -9,7 +9,7 @@ controller_server:
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"] 
     controller_plugins: ["FollowPath"]
-    cmd_vel_topic: "/cmd_vel"
+    cmd_vel_topic: "/cleaner_2/cmd_vel"
 
     # Progress checker parameters
     progress_checker:
@@ -51,8 +51,9 @@ controller_server:
       trans_stopped_velocity: 0.25
       short_circuit_trajectory_evaluation: True
       stateful: True
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      # critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       # critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "Oscillation", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
@@ -68,20 +69,21 @@ local_costmap:
     ros__parameters:
       update_frequency: 5.0
       publish_frequency: 2.0
-      global_frame: "robot_odom"
-      robot_base_frame: "robot_base_link"
-      # use_sim_time: True
+      global_frame: "odom"
+      robot_base_frame: "base_link"
+      use_sim_time: False
       rolling_window: true
       width: 1
       height: 1
       resolution: 0.05
-      robot_radius: 0.26
-      # footprint: '[ [0.089, 0.069], [0.089, -0.069], [-0.089, -0.069], [-0.089, 0.069] ]'
+      # robot_radius: 0.26
+      footprint: '[ [0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25] ]'
       plugins: ["voxel_layer", "inflation_layer"]
+      filters: ["keepout_filter"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.35
+        inflation_radius: 0.4
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -93,7 +95,7 @@ local_costmap:
         mark_threshold: 0
         observation_sources: scan
         scan:
-          topic: /scan
+          topic: /cleaner_2/scan
           max_obstacle_height: 2.0
           clearing: True
           marking: True
@@ -104,4 +106,8 @@ local_costmap:
           obstacle_min_range: 0.0
       static_layer:
         map_subscribe_transient_local: True
+      keepout_filter:
+        plugin: "nav2_costmap_2d::KeepoutFilter"
+        enabled: True
+        filter_info_topic: "/costmap_filter_info"
       always_send_full_costmap: True
