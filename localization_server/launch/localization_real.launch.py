@@ -101,7 +101,7 @@ def generate_launch_description():
         [
             map_file_arg,
             rviz_node_real,
-            real_base_laser_sensor_link_tf_publisher_node,
+            # real_base_laser_sensor_link_tf_publisher_node,
             real_base_laser_sensor_link_tf_publisher_node2,
             GroupAction(
                 condition=LaunchConfigurationEquals('map_file', 'real_cafe_area.yaml'),

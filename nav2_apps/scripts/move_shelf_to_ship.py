@@ -47,10 +47,10 @@ class RobotUtilsNode(Node):
         self.pub_fprint_cnt = 0
         self.loaded_robot_shape = Polygon()
         self.loaded_robot_shape.points = [
-            Point32(x=0.50,  y=0.40,  z=0.0),
-            Point32(x=0.50,  y=-0.40, z=0.0),
-            Point32(x=-0.50, y=-0.40, z=0.0),
-            Point32(x=-0.50, y=0.40,  z=0.0)
+            Point32(x=0.60,  y=0.50,  z=0.0),
+            Point32(x=0.60,  y=-0.50, z=0.0),
+            Point32(x=-0.60, y=-0.50, z=0.0),
+            Point32(x=-0.60, y=0.50,  z=0.0)
         ] 
         self.normal_robot_shape = Polygon()
         self.normal_robot_shape.points = [

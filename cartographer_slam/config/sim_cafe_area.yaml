@@ -1,4 +1,4 @@
-image: cafe_r3e_area.pgm
+image: cafe_r3e2_area.pgm
 mode: trinary
 resolution: 0.05
 origin: [-3.47, -4.6, 0]
