@@ -60,6 +60,11 @@ class TrashTableFinder(Node):
         self.MAX_DIST_FROM_TABLE = 1.5
         self.MEAN_DIST_FROM_TABLE = 1.0
         self.MIN_DIST_FROM_TABLE = 0.2
+        self.CHK_LEG_DIST = 0.35
+        self.left_leg_idx = None
+        self.right_leg_idx = None
+        self.front_leg_delta_idx = None
+        self.find_near_front_leg = False
         self.RBot = True
         self.ns = self.robot_name
         if self.robot_name == "rb1_robot":
@@ -71,7 +76,9 @@ class TrashTableFinder(Node):
  
         self.P = 0.9
         self.D = 0.05
+
         self.front_range_ix = 540   # 500
+        
         self.angular_controller = Controller(P=self.P, D=self.D)
 
         self.scan_sub_ = self.create_subscription(LaserScan, '{}/scan'.format(self.ns), self.scan_callback, QoSProfile(
@@ -109,15 +116,38 @@ class TrashTableFinder(Node):
         self.left_min_value = msg.ranges[self.left_min_dist_index]
         f_scan_msg.ranges[self.left_min_dist_index] = self.left_min_value
 
+        front_idx = int(len(msg.ranges)/2)
+        front_leg_fg = 0
+        front_range = int(1.5707/msg.angle_increment)
+        for i in range(front_idx, front_idx - front_range, -1):
+            if msg.ranges[i] < self.CHK_LEG_DIST:   # 0.35
+                self.left_leg_idx = front_idx - i
+                front_leg_fg += 1
+                break
+
         # We get the right closest reading, x[int(x.size/2):]
         self.right_min_dist_index = np.nanargmin(msg.ranges[int(len(msg.ranges)/2):]) + int(len(msg.ranges)/2)
         self.right_min_value = msg.ranges[self.right_min_dist_index]
         f_scan_msg.ranges[self.right_min_dist_index] = self.right_min_value
 
+        for i in range(front_idx+1, front_idx + front_range):
+            if msg.ranges[i] < self.CHK_LEG_DIST:   # 0.35
+                self.right_leg_idx = i - front_idx
+                front_leg_fg += 1
+                break
+
         # We calculate the angle in radians between both detections
         angle_left = f_scan_msg.angle_increment * self.left_min_dist_index
         angle_right = f_scan_msg.angle_increment * self.right_min_dist_index
         self.angle_between_left_right = angle_right - angle_left
+
+        if front_leg_fg >= 2:
+            self.front_leg_delta_idx = self.left_leg_idx - self.right_leg_idx
+            self.find_near_front_leg = True
+            print("Front leg - left: {}, right: {}".format(self.left_leg_idx, self.right_leg_idx))
+        else:
+            self.front_leg_delta_idx = 0
+            self.find_near_front_leg = False
 
         self.check_if_table()
         self.detection_table_side()
@@ -146,8 +176,9 @@ class TrashTableFinder(Node):
         beta = self.angle_between_left_right
         aux = np.square(d2) + np.square(d1) - 2*d1*d2*np.cos(beta)
         w = np.sqrt(aux)
-        print("d1: {}, d2: {}, beta: {}".format(d1, d2, beta))
-        print("looking for Table_with : {}, Actual w : {}".format(self.Table_Width, w))
+
+        # print("d1: {}, d2: {}, beta: {}".format(d1, d2, beta))
+        # print("looking for Table_with : {}, Actual w : {}".format(self.Table_Width, w))
 
         width_ok = w >= self.Table_Width - error and w <= self.Table_Width + error
         if width_ok:
@@ -166,6 +197,9 @@ class TrashTableFinder(Node):
                     self.get_logger().debug("IS TABLE IN FRONT =d1="+str(d1)+",d2="+str(d2)+"w="+str(w))
                     self.is_table = True
                     self.table_status = "in_front"
+                    print("Find the table in front : left: {}, right: {}, w: {}".format(d2, d1, w))
+                    print("left leg idx: {}, right leg idx: {}".format(self.left_leg_idx, self.right_leg_idx))
+
         else:
             self.get_logger().debug("WIDTH TABLE WRONG=w="+str(w))
             self.is_table = False
@@ -212,6 +246,29 @@ class TrashTableFinder(Node):
             self.vel_cmd.angular.z = w
             self.vel_cmd.linear.x = x
         self.vel_pub_.publish(self.vel_cmd)
+
+    def align_to_front_leg(self):
+        if not self.find_near_front_leg:
+            print("Align to front leg - Not found near front leg...")
+            return False
+        rate = self.create_rate(10)
+        aligned_fg = False
+        cnt = 0
+        while not aligned_fg:
+            control_variable = -1*(self.front_leg_delta_idx) / 100.0
+            vel_w = self.angular_controller.update(control_variable)
+            if cnt % 5 == 0:
+                print("Aligning to the center of the leg delta({}), Rotate the robot... - w : {}".format(self.front_leg_delta_idx, vel_w))
+            self.rotate(direction=None, w=vel_w, x=0.0)
+            rclpy.spin_once(self)
+            # rate.sleep()
+            if abs(self.front_leg_delta_idx) < 3:     # sim: 5 * 0.004364 / 3.141592 * 180 = 
+                aligned_fg = True
+            cnt += 1
+        self.stop()
+        print("Aligned to the center of the leg : {}".format(self.front_leg_delta_idx))
+        self.get_logger().info("Robot aligned to the front legs")
+        return True 
 
 def main(args=None):
     rclpy.init(args=args)

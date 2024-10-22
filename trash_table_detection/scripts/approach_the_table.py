@@ -71,6 +71,8 @@ class ApproachTable(Node):
         # self.thresh = 0.02
         self.P = 0.9
         self.D = 0.05
+        # self.P = 0.8
+        # self.D = 0.09
         if self.target_env_ == "sim":
             self.front_range_ix = 540   # 1081/2
         else:
@@ -157,7 +159,7 @@ class ApproachTable(Node):
         bl = self.left_min_value
         for i in range(self.left_min_dist_index+1, int(len(msg.ranges)/2)):
             if abs(msg.ranges[i] - bl) > self.BOUNDARY_DEPTH:
-                self.leftmost_inner_index = i
+                self.leftmost_inner_index = i-1
                 break
             bl = msg.ranges[i]
             
@@ -171,7 +173,7 @@ class ApproachTable(Node):
         br = self.right_min_value
         for i in range(self.right_min_dist_index-1, int(len(msg.ranges)/2)):
             if abs(msg.ranges[i] - br) > self.BOUNDARY_DEPTH:
-                self.rightmost_inner_index = i
+                self.rightmost_inner_index = i+1
                 break
             br = msg.ranges[i]
 
@@ -190,9 +192,9 @@ class ApproachTable(Node):
     def detection_table_side(self):
         S = self.laser_length
         if self.target_env_ == "sim":
-            idx = 60                    # 80 x 0.004364 = 0.34912(+- 20' ), 40-> 10'
+            idx = 60                    # 60 x 0.004364 = 0.26184(+- 15' ), 40-> 10'
         else:
-            idx = 130                   # S/2 - 2.007 * 0.008714
+            idx = 120                   # (120 * 0.008714 / 3.141592)*180 = 60'
          
         # if self.left_min_dist_index <= (3.0/16.0)*S and self.right_min_dist_index >= (13.0/16.0)*S:
         if self.left_min_dist_index <= idx and self.right_min_dist_index >= (S-idx):
@@ -313,19 +315,20 @@ class ApproachTable(Node):
         """
 
         rate = self.create_rate(10)
-        self.angular_controller.setPoint(0.36)
+        # self.angular_controller.setPoint(0.36)
+        # self.angular_controller.setPoint(-0.36)
         pass_front_leg = False
         while self.table_pos != "back":
         # while not pass_front_leg:
 
             # we want to make the angle of right and left min the closest as possible
-            delta_left = int(self.laser_length / 2) - self.left_min_dist_index
-            dl = int(self.laser_length / 2) - self.left_min_dist_index
-            # delta_left = int(self.laser_length / 2) - self.leftmost_inner_index
+            # delta_left = int(self.laser_length / 2) - self.left_min_dist_index
+            # dl = int(self.laser_length / 2) - self.left_min_dist_index
+            delta_left = int(self.laser_length / 2) - self.leftmost_inner_index
 
-            delta_right = self.right_min_dist_index - int(self.laser_length / 2)
-            dr = self.right_min_dist_index - int(self.laser_length / 2)
-            # delta_right = self.rightmost_inner_index - int(self.laser_length / 2)
+            # delta_right = self.right_min_dist_index - int(self.laser_length / 2)
+            # dr = self.right_min_dist_index - int(self.laser_length / 2)
+            delta_right = self.rightmost_inner_index - int(self.laser_length / 2)
 
             # if delta_left >= 440 and delta_right >= 440:    # 360 -> 90' 
             #     control_variable = 1*(delta_left - delta_right) / 100.0
@@ -333,6 +336,7 @@ class ApproachTable(Node):
             #     control_variable = -1*(delta_left - delta_right) / 100.0
 
             control_variable = -1*(delta_left - delta_right) / 100.0
+
             vel_w = self.angular_controller.update(control_variable)
             print(delta_right, delta_left, control_variable, vel_w)
             print("--", self.right_min_value, self.left_min_value)
@@ -369,20 +373,22 @@ class ApproachTable(Node):
 
         rate = self.create_rate(10)
         self.went_front_num = 0
-        self.angular_controller.setPoint(0.3)
-        while self.table_pos == "back" or self.went_front_num <= 20:
+        # self.angular_controller.setPoint(0.3)
+        while self.table_pos == "back" or self.went_front_num <= 10:
 
             # we want to make the angle of right and left min the closest as possible
-            delta_left = int(self.laser_length / 2) - self.left_min_dist_index
-            delta_right = self.right_min_dist_index - int(self.laser_length / 2)
+            # delta_left = int(self.laser_length / 2) - self.left_min_dist_index
+            delta_left = int(self.laser_length / 2) - self.leftmost_inner_index
+            # delta_right = self.right_min_dist_index - int(self.laser_length / 2)
+            delta_right = self.rightmost_inner_index - int(self.laser_length / 2)
 
-            # control_variable = -1*(delta_right - delta_left) / 100.0
-
-            control_variable = -1*(delta_left - delta_right) / 100.0
+            # control_variable = -1*(delta_left - delta_right) / 100.0
+            control_variable = (delta_left - delta_right) / 100.0
             
             vel_w = self.angular_controller.update(control_variable)
 
-            self.rotate(direction=None, w=vel_w, x=0.03)
+            # self.rotate(direction=None, w=vel_w, x=0.02)
+            self.rotate(direction=None, w=0.0, x=0.02)
             rate.sleep()
             self.get_logger().warn("went_front_num="+str(self.went_front_num))
             if self.table_pos == "front":
