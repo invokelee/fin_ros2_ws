@@ -37,17 +37,15 @@ class Controller:
         self.Kd = D
 
 class TrashTableFinder(Node):
-    def __init__(self, robot_name):
+    def __init__(self):
         super().__init__('trash_table_finder')
+
+        self.get_parameters()
+        self.get_logger().warn("Robot NAME="+str(self.robot_name))
 
         self.callback_group = MutuallyExclusiveCallbackGroup()
 
-        # declare parameters
-        self.robot_name = robot_name
-        self.get_logger().warn("Robot NAME="+str(self.robot_name))
-
         self.ranges = []
-
         # We init the positional values
         self.left_min_dist_index = None
         self.left_min_value = None
@@ -70,14 +68,17 @@ class TrashTableFinder(Node):
         if self.robot_name == "rb1_robot":
             self.RBot = False
             self.ns = ""
-            self.Table_Width = 0.58
+            self.Table_Width = 0.55     # 0.58
+            self.target_env_ = "sim"
         else:
             self.Table_Width = 0.42
+            self.target_env_ = "real"
+
  
         self.P = 0.9
         self.D = 0.05
 
-        self.front_range_ix = 540   # 500
+        self.front_range_ix = 520   # 540
         
         self.angular_controller = Controller(P=self.P, D=self.D)
 
@@ -104,6 +105,10 @@ class TrashTableFinder(Node):
                                     10, callback_group=self.callback_group)
         self.vel_cmd = Twist()
 
+    def get_parameters(self):
+        self.declare_parameter('robot', 'rb1_robot')
+        self.robot_name = self.get_parameter('robot').get_parameter_value().string_value
+
     def scan_callback(self, msg):
         # We publish the filtered data hat we are going to use
         f_scan_msg = copy.deepcopy(msg)
@@ -112,11 +117,12 @@ class TrashTableFinder(Node):
         self.laser_length = len(f_scan_msg.ranges)
 
         # We get the left closest reading, x[:int(x.size/2)]
-        self.left_min_dist_index = np.nanargmin(msg.ranges[:int(len(msg.ranges)/2)])
+        # self.left_min_dist_index = np.nanargmin(msg.ranges[:int(len(msg.ranges)/2)])
+        self.left_min_dist_index = np.nanargmin(msg.ranges[:self.front_range_ix])
         self.left_min_value = msg.ranges[self.left_min_dist_index]
         f_scan_msg.ranges[self.left_min_dist_index] = self.left_min_value
 
-        front_idx = int(len(msg.ranges)/2)
+        front_idx = self.front_range_ix
         front_leg_fg = 0
         front_range = int(1.5707/msg.angle_increment)
         for i in range(front_idx, front_idx - front_range, -1):
@@ -126,7 +132,7 @@ class TrashTableFinder(Node):
                 break
 
         # We get the right closest reading, x[int(x.size/2):]
-        self.right_min_dist_index = np.nanargmin(msg.ranges[int(len(msg.ranges)/2):]) + int(len(msg.ranges)/2)
+        self.right_min_dist_index = np.nanargmin(msg.ranges[self.front_range_ix:]) + self.front_range_ix
         self.right_min_value = msg.ranges[self.right_min_dist_index]
         f_scan_msg.ranges[self.right_min_dist_index] = self.right_min_value
 
@@ -157,12 +163,19 @@ class TrashTableFinder(Node):
 
     def detection_table_side(self):
         S = self.laser_length
-        if self.left_min_dist_index <= (3.0/16.0)*S and self.right_min_dist_index >= (13.0/16.0)*S:
-            # Table legs on the back of the robot
-            self.table_pos = "back"
+
+        if self.target_env_ == "sim":
+            idx = 60                    # 60 x 0.004364 = 0.26184(+- 15' ), 40-> 10'
         else:
+            idx = 120                   # (120 * 0.008714 / 3.141592)*180 = 60'
+        # if self.left_min_dist_index > self.front_range_ix - 180 and self.right_min_dist_index < self.front_range_ix + 180:
+        if self.left_min_dist_index > self.front_range_ix - 240 and self.right_min_dist_index < self.front_range_ix + 240:
+        # if self.find_near_front_leg == True:
             # Table Forwards or just in the middle of the legs
             self.table_pos = "front"
+        else:
+            # Table legs on the back of the robot1
+            self.table_pos = "back"
 
     
     def check_if_table(self, error = 0.05):
@@ -190,6 +203,7 @@ class TrashTableFinder(Node):
             else:
                 # We nee dto check that its INFRONT, not on the back
                 table_is_front = self.table_pos == "front"
+                # table_is_front = self.find_near_front_leg == True
                 if not table_is_front:
                     self.get_logger().debug("NOT IN FRONT="+str(self.table_pos))
                     self.table_status = "not_in_front"
@@ -274,7 +288,8 @@ def main(args=None):
     rclpy.init(args=args)
 
     try:
-        cleaner2_finder = TrashTableFinder(args.robot_name) 
+        # cleaner2_finder = TrashTableFinder(args.robot_name) 
+        cleaner2_finder = TrashTableFinder() 
         executor = MultiThreadedExecutor(num_threads=4)
         executor.add_node(cleaner2_finder)
 

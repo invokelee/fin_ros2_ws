@@ -193,7 +193,6 @@ class RobotUtilsNode(Node):
         elev_msg = String()
         elev_msg.data = "down"  
         self.elevator_down_.publish(elev_msg)
-        # print("In robot_utils, refer to neighber node var: {}".format(table_finder.MIN_DIST_FROM_TABLE))
 
 
 # robot positions for moving

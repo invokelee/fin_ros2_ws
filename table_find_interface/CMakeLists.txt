@@ -27,6 +27,7 @@ endif()
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/GoUnderTable.action"  
+  "action/CleanTable.action"
   DEPENDENCIES std_msgs
   )
   

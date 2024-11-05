@@ -35,6 +35,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/approach_the_table.py
   scripts/trash_table_mover.py 
+  scripts/trash_table_mover_as.py 
   
   DESTINATION lib/${PROJECT_NAME}
   )

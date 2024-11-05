@@ -1,0 +1,8 @@
+# goal
+string cmd
+---
+# result
+bool complete
+---
+# feedback
+string phase
