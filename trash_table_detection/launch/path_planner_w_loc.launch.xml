@@ -1,0 +1,9 @@
+<launch>
+
+  <arg name="target" default="sim"/>
+  <arg name="robot_name" default="rb1_robot"/>
+
+  <include file="$(find-pkg-share localization_server)/launch/localization_sim.launch.py"/>
+  <include file="$(find-pkg-share path_planner_server)/launch/pathplanner_sim.launch.py"/>
+
+</launch>

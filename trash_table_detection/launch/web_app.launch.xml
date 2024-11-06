@@ -1,0 +1,9 @@
+<launch>
+
+  <arg name="target" default="sim"/>
+  <arg name="robot_name" default="rb1_robot"/>
+
+  <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml"/>
+  <include file="$(find-pkg-share course_web_dev_ros)/launch/tf2_web.launch.xml"/>
+
+</launch>

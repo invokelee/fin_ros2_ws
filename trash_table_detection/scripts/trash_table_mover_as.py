@@ -650,7 +650,7 @@ class CleanTrashTableAS(Node):
 
                     print("Rotate 180 degree right for going to put down position")
                     # self.mover_rotate_robot("right", 180)
-                    self.mover_rotate_robot("right", 200)
+                    self.mover_rotate_robot("right", 210)
 
                     print("Align to the table leg for getting out")
                     if self.mover_align_to_front_leg() == False:
