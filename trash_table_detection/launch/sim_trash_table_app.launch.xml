@@ -1,18 +1,15 @@
 <launch>
 
   <arg name="target" default="sim"/>
-  <arg name="robot_name" default="rb1_robot"/>
-
-  <!-- <include file="$(find-pkg-share localization_server)/launch/localization_sim.launch.py"/>
-  <include file="$(find-pkg-share path_planner_server)/launch/pathplanner_sim.launch.py"/> -->
+  <arg name="robot" default="rb1_robot"/>
 
   <node pkg="trash_table_detection" exec="approach_the_table.py" name="approach_the_table">
     <param name="target" value="$(var target)"/>
-    <param name="robot_name" value="$(var robot_name)"/>
+    <param name="robot" value="$(var robot)"/>
   </node>
   <node pkg="trash_table_detection" exec="trash_table_mover_as.py" name="trash_table_mover_as">
     <param name="target" value="$(var target)"/>
-    <param name="robot_name" value="$(var robot_name)"/>
+    <param name="robot" value="$(var robot)"/>
   </node>
 
 </launch>

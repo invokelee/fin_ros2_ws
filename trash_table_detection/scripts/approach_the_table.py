@@ -43,10 +43,9 @@ class ApproachTable(Node):
         super().__init__('trash_table_go_under')
 
         self.get_parameters()
-        # callback group for _sub and _action_server callbacks
-        self.callback_group = ReentrantCallbackGroup()
-
         self.get_logger().warn("Robot NAME="+str(self.robot_name))
+
+        self.callback_group = ReentrantCallbackGroup()
 
         if self.target_env_ == "sim":
             self.front_range_ix = 510   # 1081/2
@@ -69,6 +68,7 @@ class ApproachTable(Node):
         self.MEAN_DIST_FROM_TABLE = 1.0
         self.MIN_DIST_FROM_TABLE = 0.2
         self.BOUNDARY_DEPTH = 0.05
+        self.MIN_DIST_BODY = 0.20
         self.left_leg_idx = None
         self.right_leg_idx = None
         self.front_leg_delta_idx = None
@@ -76,13 +76,13 @@ class ApproachTable(Node):
 
         self.robot_stat = "ready_to_action"
         self.RBot = True
-        self.ns = self.robot_name
+        self.ns = '/' + self.robot_name
         if self.target_env_ == "sim":
             self.RBot = False
             self.ns = ""
             self.Table_Width = 0.58
         else:
-            self.Table_Width = 0.42
+            self.Table_Width = 0.45
  
         self.scan_sub_ = self.create_subscription(LaserScan, '{}/scan'.format(self.ns), self.scan_callback, QoSProfile(
                 depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
@@ -91,23 +91,19 @@ class ApproachTable(Node):
 
         self.table_pos = "nothing"
         self.SCAN_BIG_DIST = 100.0
-        qos_profile_publisher = QoSProfile(depth=1)
-        qos_profile_publisher.reliability = QoSReliabilityPolicy.BEST_EFFORT
-        self.scan_pub_ = self.create_publisher(msg_type=LaserScan,
-                                                topic='{}/scan_filtered'.format(self.ns),
-                                                qos_profile=qos_profile_publisher,
-                                                callback_group=self.callback_group)
-        if self.RBot:
-            self.action_gu_server_name = self.robot_name + '/go_under_table'
-        else:
+
+        if self.target_env_ == 'sim':
             self.action_gu_server_name = '/go_under_table'
+        else:
+            self.action_gu_server_name = self.ns + '/go_under_table'
 
         self._action_gu_server = ActionServer(self, GoUnderTable, self.action_gu_server_name, self.go_under_table, callback_group=self.callback_group)
 
-        if self.RBot:
-            self.vel_pub_ = self.create_publisher(Twist, '{}/cmd_vel'.format(self.robot_name), 10, callback_group=self.callback_group)
-        else:
+        if self.target_env_ == 'sim':
             self.vel_pub_ = self.create_publisher(Twist, '/diffbot_base_controller/cmd_vel_unstamped',
+                                    10, callback_group=self.callback_group)
+        else:
+            self.vel_pub_ = self.create_publisher(Twist, '{}/cmd_vel'.format(self.ns), 
                                     10, callback_group=self.callback_group)
         self.vel_cmd = Twist()
 
@@ -118,40 +114,41 @@ class ApproachTable(Node):
         self.robot_name = self.get_parameter('robot').get_parameter_value().string_value
 
     def scan_callback(self, msg):
-        # We publish the filtered data hat we are going to use
-        # f_scan_msg = copy.deepcopy(msg)
-        # f_scan_msg.ranges = [self.SCAN_BIG_DIST] * len(msg.ranges)
+        fmsg = copy.deepcopy(msg)
+        for i in range(len(fmsg.ranges)):
+            if fmsg.ranges[i] < self.MIN_DIST_BODY:
+                fmsg.ranges[i] = self.MAX_DIST_FROM_TABLE
 
         self.laser_length = len(msg.ranges)
 
         # We get the left closest reading, x[:int(x.size/2)]
         # self.left_min_dist_index = np.nanargmin(msg.ranges[:int(len(msg.ranges)/2)])
-        self.left_min_dist_index = np.nanargmin(msg.ranges[:self.front_range_ix])
+        self.left_min_dist_index = np.nanargmin(fmsg.ranges[:self.front_range_ix])
+
         self.left_min_value = msg.ranges[self.left_min_dist_index]
-        # f_scan_msg.ranges[self.left_min_dist_index] = self.left_min_value
 
         # We get the right closest reading, x[int(x.size/2):]
-        self.right_min_dist_index = np.nanargmin(msg.ranges[self.front_range_ix:]) + self.front_range_ix
+        self.right_min_dist_index = np.nanargmin(fmsg.ranges[self.front_range_ix:]) + self.front_range_ix
+
         self.right_min_value = msg.ranges[self.right_min_dist_index]
-        # f_scan_msg.ranges[self.right_min_dist_index] = self.right_min_value
 
         # Find left leg most right boundary 
         self.leftmost_inner_index = self.left_min_dist_index
         bl = self.left_min_value
         for i in range(self.left_min_dist_index+1, self.front_range_ix):
-            if abs(msg.ranges[i] - bl) > self.BOUNDARY_DEPTH:
+            if abs(fmsg.ranges[i] - bl) > self.BOUNDARY_DEPTH:
                 self.leftmost_inner_index = i-1
                 break
-            bl = msg.ranges[i]
+            bl = fmsg.ranges[i]
             
         # Find right leg most left boundary 
         self.rightmost_inner_index = self.right_min_dist_index
         br = self.right_min_value
         for i in range(self.right_min_dist_index-1, self.front_range_ix, -1):
-            if abs(msg.ranges[i] - br) > self.BOUNDARY_DEPTH:
+            if abs(fmsg.ranges[i] - br) > self.BOUNDARY_DEPTH:
                 self.rightmost_inner_index = i+1
                 break
-            br = msg.ranges[i]
+            br = fmsg.ranges[i]
 
         # We calculate the angle in radians between both detections
         angle_left = msg.angle_increment * self.left_min_dist_index
@@ -160,13 +157,11 @@ class ApproachTable(Node):
         
         self.check_if_table()
         self.detection_table_side()
-        # self.scan_pub_.publish(f_scan_msg)
-        
 
     def detection_table_side(self):
         S = self.laser_length
         if self.target_env_ == "sim":
-            idx = 60                    # 60 x 0.004364 = 0.26184(+- 15' ), 40-> 10'
+            idx = 60                    # 60 x 0.004364 = 0.26184(+- 15' ),=> 15' + (180-135) 40-> 10'
         else:
             idx = 120                   # (120 * 0.008714 / 3.141592)*180 = 60'
          
@@ -231,6 +226,7 @@ class ApproachTable(Node):
             feedback_msg.phase = "searching_for_table"
         else:
             feedback_msg.phase = "skip searching_for_table"
+                
         goal_handle.publish_feedback(feedback_msg)
 
         if goal_handle.request.start:
@@ -278,8 +274,11 @@ class ApproachTable(Node):
 
             # delta_right = self.right_min_dist_index - int(self.laser_length / 2)
             delta_right = self.rightmost_inner_index - self.front_range_ix
-
+            
             control_variable = (delta_left - delta_right) / 100.0
+            if self.target_env_ == 'real':
+                control_variable *= -1
+
             vel_w = self.angular_pid.calcPID(control_variable)
 
             # print(delta_left, "(",self.laser_length/2-self.left_min_dist_index,") ",
@@ -292,7 +291,10 @@ class ApproachTable(Node):
         # keep going forward for a while
         self.went_front_num = 0
         print("Keep going forward loop to deep inside table..")
-        while self.went_front_num <= 70:
+        cnt = 70
+        if self.target_env_ == 'real':
+            cnt = 20
+        while self.went_front_num <= cnt:
             self.rotate(direction=None, w=0.0, x=0.05)
             if self.went_front_num % 5 == 0:
                 self.get_logger().warn("went_front_num="+str(self.went_front_num))
@@ -320,6 +322,9 @@ class ApproachTable(Node):
 
             # control_variable = -1*(delta_left - delta_right) / 100.0
             control_variable = (delta_left - delta_right) / 100.0
+            if self.target_env_ == 'real':
+                control_variable *= -1
+
             vel_w = self.angular_pid.calcPID(control_variable)
 
             # self.rotate(direction=None, w=vel_w, x=0.02)

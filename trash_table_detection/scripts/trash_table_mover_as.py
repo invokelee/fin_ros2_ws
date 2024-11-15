@@ -36,21 +36,23 @@ class RobotUtilsNode(Node):
 
         if self.target_env_ == 'sim':
             self.cmd_vel_pub_ = self.create_publisher(Twist, '/diffbot_base_controller/cmd_vel_unstamped', 10)
+            self.ac_name = "/go_under_table"
         else:
             self.cmd_vel_pub_ = self.create_publisher(Twist, '/cleaner_2/cmd_vel', 10)
+            self.ac_name = "/"+self.robot_name + "/go_under_table"
 
         self.group_ac = MutuallyExclusiveCallbackGroup()
         self.table_finder_phase = "nothing"
         self.robot_state = "iddle"
-        if self.target_env_ == 'sim':
-            self.ac_name = "/go_under_table"
-        else:
-            self.ac_name = "/"+self.robot_name + "/go_under_table"
 
         self._table_finder_ac = ActionClient(self, GoUnderTable, self.ac_name, callback_group=self.group_ac)
+        
+        if self.target_env_ == 'sim':
+            self.elevator_up_ = self.create_publisher(String, '/elevator_up', 1)
+            self.elevator_down_ = self.create_publisher(String, '/elevator_down', 1)
+        else:
+            self.elevator_up_ = self.elevator_down_ = self.create_publisher(String, '/set_elevator', 1)
 
-        self.elevator_up_ = self.create_publisher(String, '/elevator_up', 1)
-        self.elevator_down_ = self.create_publisher(String, '/elevator_down', 1)
         self.loc_fprint_ = self.create_publisher(Polygon, '/local_costmap/footprint', 10)
         self.glb_fprint_ = self.create_publisher(Polygon, '/global_costmap/footprint', 10)
         self.attached_table_stat = 2
@@ -58,19 +60,34 @@ class RobotUtilsNode(Node):
         self.find_rb_cnt = 0
         self.rb_direction = None
         self.loaded_robot_shape = Polygon()
-        self.loaded_robot_shape.points = [
-            Point32(x=0.50,  y=0.5,  z=0.0),
-            Point32(x=0.50,  y=-0.5, z=0.0),
-            Point32(x=-0.50, y=-0.5, z=0.0),
-            Point32(x=-0.50, y=0.5,  z=0.0)
-        ] 
-        self.normal_robot_shape = Polygon()
-        self.normal_robot_shape.points = [
-            Point32(x=0.3,  y=0.3,  z=0.0),
-            Point32(x=0.3,  y=-0.3, z=0.0),
-            Point32(x=-0.3, y=-0.3, z=0.0),
-            Point32(x=-0.3, y=0.3,  z=0.0)
-        ] 
+        if self.target_env_ == 'sim':
+            self.loaded_robot_shape.points = [
+                Point32(x=0.50,  y=0.5,  z=0.0),
+                Point32(x=0.50,  y=-0.5, z=0.0),
+                Point32(x=-0.50, y=-0.5, z=0.0),
+                Point32(x=-0.50, y=0.5,  z=0.0)
+            ] 
+            self.normal_robot_shape = Polygon()
+            self.normal_robot_shape.points = [
+                Point32(x=0.3,  y=0.3,  z=0.0),
+                Point32(x=0.3,  y=-0.3, z=0.0),
+                Point32(x=-0.3, y=-0.3, z=0.0),
+                Point32(x=-0.3, y=0.3,  z=0.0)
+            ] 
+        else:
+            self.loaded_robot_shape.points = [
+                Point32(x=0.4,  y=0.4,  z=0.0),
+                Point32(x=0.4,  y=-0.4, z=0.0),
+                Point32(x=-0.4, y=-0.4, z=0.0),
+                Point32(x=-0.4, y=0.4,  z=0.0)
+            ] 
+            self.normal_robot_shape = Polygon()
+            self.normal_robot_shape.points = [
+                Point32(x=0.2,  y=0.2,  z=0.0),
+                Point32(x=0.2,  y=-0.2, z=0.0),
+                Point32(x=-0.2, y=-0.2, z=0.0),
+                Point32(x=-0.2, y=0.2,  z=0.0)
+            ] 
 
         timer_cb_group = MutuallyExclusiveCallbackGroup()
         self.create_timer(1.0, self.timer_callback, callback_group=timer_cb_group)
@@ -153,7 +170,7 @@ class RobotUtilsNode(Node):
             vel_cmd.linear.x = x
         self.cmd_vel_pub_.publish(vel_cmd)
 
-    def rb_move_out(self, direction='forward', d_rotate='forward', t=5.5):
+    def rb_move_out(self, direction='forward', d_rotate='forward', t=5.5, l_x=1):
         # Start time
         start_time = time.time()
         tm_duration = t
@@ -161,10 +178,10 @@ class RobotUtilsNode(Node):
         # Publish a message to move the robot backwards
         msg = Twist()
         if direction == 'backward':
-            msg.linear.x = -0.25      # Move backwards
+            msg.linear.x = -0.25*l_x      # Move backwards
             mesg = 'Moving the robot backwards'
         else:
-            msg.linear.x = 0.25      # Move forwards
+            msg.linear.x = 0.25*l_x      # Move forwards
             mesg = 'Moving the robot forwards'
         if d_rotate == 'left':
             msg.angular.z = 0.1
@@ -216,14 +233,25 @@ class CleanTrashTableAS(Node):
         if self.target_env_ == 'sim':
             self.move_positions = self.sim_move_positions
             self.check_positions = self.sim_check_positions
-
             self.table1_wp = self.sim_table_1_wp
-            self.table2_wp = self.sim_table_2_wp
-            self.table2_cor_wp = self.sim_table_2_cor_wp
             self.discovery_wp = self.sim_discovery_wp
+            
+            self.table2_wp = self.sim_table_2_wp
+            self.table2_cor_wp = self.sim_table2_cor_wp
+
+            self.cleaner_move_table_1 = self.sim_cleaner_move_table_1
+            self.cleaner_move_table_2 = self.sim_cleaner_move_table_2
+            self.discovery_and_cleaner_move = self.sim_discovery_and_cleaner_move
             print('Target Env is Simulation')
         else:
             self.move_positions = self.real_move_positions
+            self.check_positions = self.real_check_positions
+            self.table1_wp = self.real_table_1_wp
+            self.discovery_wp = self.real_discovery_wp
+
+            self.cleaner_move_table_1 = self.real_cleaner_move_table_1
+            self.cleaner_move_table_2 = None
+            self.discovery_and_cleaner_move = self.sim_discovery_and_cleaner_move
             print('Target Env is Real robot')
 
         self.set_initial_pose(navigator, self.move_positions['home_position'])
@@ -244,7 +272,7 @@ class CleanTrashTableAS(Node):
 
     def init_variable(self):
         self.requested_cmd = None
-
+        self.navi_state = 'none'
         # robot positions for moving
         self.sim_move_positions = {
             "home_position":    [0.0, 0.0, 0.0],
@@ -273,7 +301,7 @@ class CleanTrashTableAS(Node):
             "put_down_pos":     [ 8.0,  1.2, 1.5707],
         }
 
-        self.sim_table_2_cor_wp = {
+        self.sim_table2_cor_wp = {
             "corridor_pos1":    [ 0.5,  -0.9,   -0.5],
             "corridor_pos2":    [ 1.45,  -1.4,   0.0],
             "corridor_pos3":    [ 4.0,  -1.0,   0.8535],
@@ -303,28 +331,56 @@ class CleanTrashTableAS(Node):
         }
 
         self.real_move_positions = {
-            "home_position":  [ 0.018,  0.005,  0.0], # 0.018 0.005 -0.304
-            "loading_pos":    [ 4.2,   -0.79,  -1.7],  # -1.57
-            "corridor_pos1":  [ 0.5,   -0.9,    0.0],
-            "put_down_pos":   [ 1.9,    0.9,    1.37]    # 1.57
+            "home_position":    [ -0.10,   0.0,   0.0],
+            "loading_pos1":     [ 0.0,   0.0,   1.57],
+            "loading_pos2":     [ 0.62,  0.77,  3.14],
+            "corridor_pos1":    [ 3.34, -0.22,  3.14],
+            "corridor_pos2":    [ 0.73, -0.38, -2.36],
+            "corridor_pos3":    [-0.19, -0.84,  3.14],
+            "corridor_pos4":    [-1.68, -0.65,  1.57],
+            "put_down_pos":     [-1.64,  0.49,  1.57],
         }
 
+        # self.real_table_1_wp = {
+        #     "loading_pos":      [ 0.62,  0.77,  3.14],
+        #     "corridor_pos3":    [-0.19, -0.84,  3.14],
+        #     "corridor_pos4":    [-1.68, -0.65,  1.57],
+        #     "put_down_pos1":    [-1.64,  0.49,  1.57],
+        # }
+
+        # For Testing
+#------------------------- 11/09
         self.real_table_1_wp = {
-            "loading_pos":    [ 4.2, -0.79, -1.7],
-            "corridor_pos1":  [ 8.0,  0.0,  -1.5707],
-            "put_down_pos":   [ 8.0, -2.1,  -1.5707],
+            # "loading_pos":      [ 0.62,  0.77,  3.14],
+            "loading_pos":      [ 0.62,  0.95,  3.14],
+            "corridor_pos2":    [ 0.73, -0.38,  0.0],
+            "corridor_pos1":    [ 3.34,  -0.22,  1.57],
+            "put_down_pos":     [ 3.34,  1.0,   1.57],      # dummy pos for testing between corridor_pos1 and cp_03 
         }
 
         self.real_check_positions = {
-            "cp_01":             [ 1.1,   0.3,   1.5707],
-            # "cp_01":             [-0.5,   1.0,   1.5707],
-            "cp_02":             [-1.79, -1.22, 3.14159],
-            "cp_03":             [-0.784,-2.44, -1.5707],
-            "cp_04":             [ 1.36, -1.42, 0.0],
-            "cp_05":             [ 1.36, -3.02, -1.5707],
-            "cp_06":             [ 1.36, -1.42, 1.5707],
-            "cp_07":             [ 4.3,  -1.31, 0.0],
-            "cp_08":             [ 5.09,  0.512, 1.5707],
+            # "cp_01":             [ 0.62,  0.95,  3.14],   # actual pos
+            "cp_01":             [ 0.62,  0.95,  0.0],      # dummy pos for testing
+            # "cp_02":             [ 2.32,  0.63,  0.0],
+            "cp_02":             [ 2.7,   1.0,  0.0],
+            "cp_03":             [ 3.31,  1.76,  1.57],
+            "cp_04":             [ 3.84, -1.16, -1.57],
+            "cp_05":             [ 2.08, -0.34,  3.14],
+            "cp_06":             [ 0.37, -0.88, -1.57],
+        }
+
+        # self.real_discovery_wp = {
+        #     "corridor_pos1":    [ 3.34, -0.22,  3.14],
+        #     "corridor_pos2":    [ 0.73, -0.38, -2.36],
+        #     "corridor_pos3":    [-0.19, -0.84,  3.14],
+        #     "corridor_pos4":    [-1.68, -0.65,  1.57],
+        #     "put_down_pos":    [-1.64,  0.49,  1.57],
+        # }
+        # For testing
+        self.real_discovery_wp = {
+            "corridor_pos1":    [ 3.34, -0.22,  3.14],
+            "corridor_pos2":    [ 0.73, -0.38, -2.36],
+            "put_down_pos":     [ 0.73,  0.8,   1.57],  # dummy pos for testing
         }
 
     def timer_callback(self):
@@ -348,6 +404,7 @@ class CleanTrashTableAS(Node):
 
         navigator.setInitialPose(initial_pose)
         print('Set the Initial position at Home position.')
+        self.navi_state = 'init_pos'
 
     def navi_go_through_pose(self, navigator, wp):
         route_poses = []
@@ -363,6 +420,7 @@ class CleanTrashTableAS(Node):
         print(route_poses)
 
         navigator.goThroughPoses(route_poses)
+        self.navi_state = 'moving'
         i = 0
         while not navigator.isTaskComplete():
             i = i + 1
@@ -378,15 +436,17 @@ class CleanTrashTableAS(Node):
         result = navigator.getResult()
         if result == TaskResult.SUCCEEDED:
             print('Success to go through poses')
+            self.navi_state = 'success'
             ret = True
         elif result == TaskResult.CANCELED:
             print('go through poses was canceled')
+            self.navi_state = 'canceled'
             ret = False
         elif result == TaskResult.FAILED:
             print('Fail to go through poses')
+            self.navi_state = 'failed'
             ret = False
         return ret
-
 
     def navi_goto_pose(self, navigator, m_p, retry=True):
         move_to_pose = PoseStamped()
@@ -407,6 +467,7 @@ class CleanTrashTableAS(Node):
 
         ret = False
         for n in range(5):
+            self.navi_state = 'moving'
             navigator.goToPose(move_to_pose)
             i = 0
             while not navigator.isTaskComplete():
@@ -416,17 +477,31 @@ class CleanTrashTableAS(Node):
                     print('Estimated time of arrival at loading position: ' + '{0:.0f}'.format(
                             Duration.from_msg(feedback.estimated_time_remaining).nanoseconds / 1e9)
                         + ' seconds.')
+                if robot_utils.attached_table_stat != 1 and table_finder.is_table :
+                    print("=%d= Detected table in the way of target position x(%f), y(%f), theta(%f)" 
+                    % (i, m_p[0], m_p[1], m_p[2]))
+                    print("==> Table at %s Distance left((%f), right(%f)" % (table_finder.table_status, table_finder.left_min_value,  table_finder.right_min_value))
+                    if table_finder.left_min_value < 0.7 and table_finder.right_min_value < 0.7:
+                        navigator.cancelTask()
+                    #---------------------------------
+
                 rclpy.spin_once(robot_utils)
                 rclpy.spin_once(table_finder)
 
             result = navigator.getResult()
             if result == TaskResult.SUCCEEDED:
+                self.navi_state = 'success'
                 ret = True
                 break
+            elif result == TaskResult.CANCELED:
+                print('navi_goto_pose was canceled')
+                self.navi_state = 'canceled'
+                ret = False
             elif result == TaskResult.FAILED:
                 print('Task at request_item_location, failed on its {} attempt.'.format(n+1))
                 if n + 1 == 5 or retry == False:
                     ret = False
+                    self.navi_state = 'failed'
                     break 
                 time.sleep(1.0)
             else:
@@ -453,6 +528,7 @@ class CleanTrashTableAS(Node):
         ret = False
         for n in range(5):
             navigator.goToPose(move_to_pose)
+            self.navi_state = 'moving'
             i = 0
             while not navigator.isTaskComplete():
                 i = i + 1
@@ -461,43 +537,57 @@ class CleanTrashTableAS(Node):
                     print('Estimated time of arrival at loading position: ' + '{0:.0f}'.format(
                             Duration.from_msg(feedback.estimated_time_remaining).nanoseconds / 1e9)
                         + ' seconds.')
-                if table_finder.is_table:
+                if robot_utils.attached_table_stat != 1 and table_finder.is_table :
                     print("=%d= Detected table in the way of target position x(%f), y(%f), theta(%f)" 
                     % (i, m_p[0], m_p[1], m_p[2]))
+                    print("==> Table at %s Distance left((%f), right(%f)" % (table_finder.table_status, table_finder.left_min_value,  table_finder.right_min_value))
+                    if table_finder.left_min_value < 0.7 and table_finder.right_min_value < 0.7:
+                        navigator.cancelTask()
+                    #---------------------------------
                 rclpy.spin_once(robot_utils)
                 rclpy.spin_once(table_finder)
 
             result = navigator.getResult()
             if result == TaskResult.SUCCEEDED:
                 print('Arrived at the target position x(%f), y(%f), theta(%f) and Check the table exist' % (m_p[0], m_p[1], m_p[2]))
+                self.navi_state = 'success'
                 ret = True
                 break
             elif result == TaskResult.CANCELED:
                 print('To move to target position was canceled and Check the table exist')
+                self.navi_state = 'canceled'
                 ret = False
+
                 break
             elif result == TaskResult.FAILED:
                 print('Task at request_item_location, failed on its {} attempt, but check the table exist'.format(n+1))
                 if n + 1 == 5 or retry == False: 
+                    self.navi_state = 'failed'
                     ret = False
                     break
                     # exit(-1)
                 time.sleep(1.0)
             else:
                 break
+        if self.navi_state != 'failed':
+            table_finder.check_if_table()
+            if table_finder.is_table == True:
+                ret = True
+                print("Found the table ! ")
+            else:
+                print("Not Found the table... ")
+                ret = False
+            print("table status ({})".format(table_finder.table_status))
 
-        table_finder.check_if_table()
-        if table_finder.is_table == True:
-            print("Found the table ! ")
-        else:
-            print("Not Found the table... ")
-        print("table status ({})".format(table_finder.table_status))
-
-        return table_finder.is_table
+        # return table_finder.is_table
+        return ret
 
     def find_trash_table(self):
-        print("Finding table - rotate right 60'")
-        self.mover_rotate_robot("right", 70)
+        print("Finding table - rotate right back 60'")
+        self.mover_rotate_robot("right", 60)
+
+        table_finder.finding_fg = True
+        
         time.sleep(1)
         table_finder.is_table = False
         ret = False
@@ -506,6 +596,7 @@ class CleanTrashTableAS(Node):
             robot_utils.rb_rotate("left", 0.3, 0.0)
             if cnt % 5 == 0:
                 print("Finding table ... {}".format(cnt))
+                table_finder.finding_fg = True
 
             if table_finder.is_table and table_finder.table_pos == "front":
                 ret = True
@@ -515,13 +606,20 @@ class CleanTrashTableAS(Node):
             time.sleep(0.1)
             cnt -= 1
 
+        table_finder.finding_fg = False
         robot_utils.rb_stop()
         return ret 
 
     def mover_rotate_robot(self, direction, deg=90):
         dt_const = 0
-        turn_cnt = int(deg / 30 * 10) + dt_const    
-        w = 0.19           
+        if self.target_env_ == 'sim':   
+            w = 0.19           
+            turn_cnt = int(deg / 30 * 10) + dt_const 
+        else:
+            # w = 0.10
+            w = 0.13
+            turn_cnt = int(deg / 30 * 6) + dt_const 
+                       
         while turn_cnt > 0:
             robot_utils.rb_rotate(direction, w=w, x=0.0)
             if turn_cnt % 5 == 0:
@@ -531,12 +629,12 @@ class CleanTrashTableAS(Node):
             time.sleep(0.1)        
             turn_cnt -= 1
 
-    def mover_align_to_front_leg(self):
-        ret = table_finder.align_to_front_leg()
+    def mover_align_to_front_leg(self, center=False ):
+        ret = table_finder.align_to_front_leg(center)
         return ret
 
     def mover_elevator_up(self):
-        cmd_cnt = 20    # 4 second 
+        cmd_cnt = 30    # 4 second 
         robot_utils.rb_elevator_up()
         print("Elevator up {}".format(cmd_cnt))
         while cmd_cnt > 0:
@@ -546,7 +644,7 @@ class CleanTrashTableAS(Node):
         robot_utils.attached_table_stat = 1
 
     def mover_elevator_down(self):
-        cmd_cnt = 20    # 4 second   
+        cmd_cnt = 30    # 4 second   
         robot_utils.rb_elevator_down()
         print("Elevator down {}".format(cmd_cnt))
         while cmd_cnt > 0:
@@ -564,7 +662,7 @@ class CleanTrashTableAS(Node):
         feedback_msg.phase = msg
         goal_handle.publish_feedback(feedback_msg)
 
-    def cleaner_move_table_1(self, goal_handle):
+    def sim_cleaner_move_table_1(self, goal_handle):
         find_fg = False
         job_stat = False
         self.mover_init_robot()
@@ -606,7 +704,7 @@ class CleanTrashTableAS(Node):
                         self.mover_rotate_robot("left", 90)
 
                         print("Align to the table leg for lift")
-                        if self.mover_align_to_front_leg() == False:
+                        if self.mover_align_to_front_leg(center=True) == False:
                             print("-- Fail to align robot to the leg")
                         time.sleep(1)
 
@@ -625,7 +723,7 @@ class CleanTrashTableAS(Node):
                         robot_utils.rb_move_out(direction='forward', d_rotate='left')
 
                         print("Rotate 110 degree right for going to put down position")
-                        self.mover_rotate_robot("right", 145)
+                        self.mover_rotate_robot("right", 140)
 
             elif loc == 'put_down_pos':
                 ret = self.navi_goto_pose(navigator, pos)
@@ -649,8 +747,8 @@ class CleanTrashTableAS(Node):
                     time.sleep(1)
 
                     print("Rotate 180 degree right for going to put down position")
-                    # self.mover_rotate_robot("right", 180)
-                    self.mover_rotate_robot("right", 210)
+                    # self.mover_rotate_robot("right", 210)     # for 180'
+                    self.mover_rotate_robot("right", 95)       # for 90
 
                     print("Align to the table leg for getting out")
                     if self.mover_align_to_front_leg() == False:
@@ -679,7 +777,7 @@ class CleanTrashTableAS(Node):
                 print('Fail to go back home position ...')
         return job_stat
 
-    def cleaner_move_table_2(self, goal_handle):
+    def sim_cleaner_move_table_2(self, goal_handle):
         find_fg = False
         job_stat = False
         self.mover_init_robot()
@@ -785,7 +883,8 @@ class CleanTrashTableAS(Node):
         return job_stat
 
 ###-------------------------
-    def cleaner_move_table_2_2(self, goal_handle):
+    # for navigation with go_through_pose
+    def sim_cleaner_move_table_2_2(self, goal_handle):
         find_fg = False
         job_stat = False
         self.mover_init_robot()
@@ -889,7 +988,7 @@ class CleanTrashTableAS(Node):
         return job_stat
 ###-------------------------
 
-    def discovery_and_cleaner_move(self, goal_handle):
+    def sim_discovery_and_cleaner_move(self, goal_handle):
         self.send_feedback_msg(goal_handle, "discovering the trash table in the cafe")
         find_fg = False
         job_stat = False
@@ -1016,12 +1115,12 @@ class CleanTrashTableAS(Node):
 
         if job_stat:
             self.send_feedback_msg(goal_handle, "Done!! and going back to home position")
-        print(">> Going back to home...")
-        ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
-        if ret:
-            print('Arrived at home position !')
-        else:
-            print('Fail to go back home position ...')
+            print(">> Going back to home...")
+            ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
+            if ret:
+                print('Arrived at home position !')
+            else:
+                print('Fail to go back home position ...')
         return job_stat
 
     def go_home_position(self, goal_handle):
@@ -1052,6 +1151,8 @@ class CleanTrashTableAS(Node):
             ret = self.cleaner_move_table_1(goal_handle)
         elif goal_handle.request.cmd == "clean_table2":
             ret = self.cleaner_move_table_2(goal_handle)
+
+        # for navigation with go_through_pose
         elif goal_handle.request.cmd == "clean_table22":
             ret = self.cleaner_move_table_2_2(goal_handle)
         elif goal_handle.request.cmd == "discover_clean":
@@ -1078,8 +1179,265 @@ class CleanTrashTableAS(Node):
         self.requested_cmd = None
         return result 
 
+#====================================================================================
 #---------------------------
+# real_robot
+#---------------------------
+#====================================================================================
 
+    def real_cleaner_move_table_1(self, goal_handle):
+        find_fg = False
+        job_stat = False
+        self.mover_init_robot()
+        for loc, pos in self.table1_wp.items():
+            print("> Go to the {}...".format(loc))
+            self.send_feedback_msg(goal_handle, "move robot to "+ loc)
+            if loc == 'loading_pos':
+                ret = self.navi_goto_pose_n_check_table(navigator, pos)
+                if ret:
+                    print('Found the table in front at the {} !'.format(loc))
+                    find_fg = True
+                else:
+                    print('Not found the table at the {}, rotating around to find the table...'.format(loc))
+                    if self.find_trash_table():
+                        print('Found the table around of robot!')
+                        find_fg = True
+                    else:
+                        print('Not found the table around of robot!')
+                        job_stat = True
+                        break
+
+                if find_fg:
+                    print("Send the goal to 'Approch to trash table action server'!")
+                    self.send_feedback_msg(goal_handle, "Call AS to approach under the trash table")
+                    robot_utils.send_goal(search=False)
+                    robot_utils.robot_state = "moving-under_table"
+                    while robot_utils.robot_state != "trash-table_search_finished":
+                        rclpy.spin_once(robot_utils)
+                        rclpy.spin_once(table_finder)
+
+                    find_fg = False   
+                    if robot_utils.robot_state == "trash-table_search_finished":
+                        print("-- Found trash table and Complete to go under table --")
+                        find_fg = True
+
+                        self.send_feedback_msg(goal_handle, "Rotate robot and lift the table")
+
+                        # input("Press Enter to next...")
+
+                        print("Rotate 90 degree left for going forward")
+                        self.mover_rotate_robot("left", 85)
+
+                        # input("Press Enter to next...")
+
+                        print("Align to the table leg for lift")
+                        if self.mover_align_to_front_leg(center=True) == False: # if center == Trur move to center
+                            print("-- Fail to align robot to the leg")
+                        time.sleep(1)
+
+                        # input("Press Enter to next...")
+
+                        print("Lift the trash table")
+                        self.mover_elevator_up()
+
+                        print("Start to publish new footprint for the loaded robot shape")
+                        robot_utils.pub_fprint_cnt = 1
+                        while robot_utils.pub_fprint_cnt > 0:
+                            rclpy.spin_once(robot_utils)
+                            rclpy.spin_once(table_finder)
+
+                        self.send_feedback_msg(goal_handle, "Publish loaded footprint and go out from the loading position")
+
+                        # input("Press Enter to next...")
+
+                        print("Moving forward to get out of loading position...")
+                        robot_utils.rb_move_out(direction='forward', d_rotate='left', t=8, l_x=0.5)   # default t=5.5, for change (direction='forward', d_rotate='left', t=4)
+
+            elif loc == 'put_down_pos':
+                ret = self.navi_goto_pose(navigator, pos)
+                if not ret:
+                    print('Fail to move to the {}...'.format(loc))
+                else:
+                    self.send_feedback_msg(goal_handle, "put down the table and going out from underneath table")
+                    print('Arrived at the {} !'.format(loc))
+                    print("Drop the trash table")
+                    self.mover_elevator_down()
+
+                    print("Start to publish new footprint for the unloaded robot shape")
+                    robot_utils.pub_fprint_cnt = 1
+                    while robot_utils.pub_fprint_cnt > 0:
+                        rclpy.spin_once(robot_utils)
+                        rclpy.spin_once(table_finder)
+
+                    if self.mover_align_to_front_leg(center=True) == False:
+                        print("-- Fail to align robot to the leg")
+
+                    time.sleep(1)
+
+                    print("Rotate 180 degree right for going to put down position")
+                    # self.mover_rotate_robot("right", 180)
+                    self.mover_rotate_robot("right", 190)
+
+                    print("Align to the table leg for getting out")
+                    if self.mover_align_to_front_leg() == False:
+                        print("-- Fail to align robot to the leg")
+    
+                    time.sleep(1)
+                    print("Moving forwardward to get out of put down position...")
+                    robot_utils.rb_move_out(direction='forward', d_rotate='forward', t=4 )
+                    job_stat = True
+
+            else:
+                # self.send_feedback_msg(goal_handle, "move robot to " + loc)
+                print("Moving forward to the {}...".format(loc))
+                ret = self.navi_goto_pose(navigator, pos)
+                if ret:
+                    print('Arrived at the {} !'.format(loc))
+                else:
+                    print('Fail to move to the {}...'.format(loc))
+
+        if job_stat:
+            self.send_feedback_msg(goal_handle, "going back to home position")
+            print(">> Going back to home...")
+            ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
+            if ret:
+                print('Arrived at home position !')
+            else:
+                print('Fail to go back home position ...')
+        return job_stat
+
+    def real_discovery_and_cleaner_move(self, goal_handle):
+        self.send_feedback_msg(goal_handle, "discovering the trash table in the cafe")
+        find_fg = False
+        job_stat = False
+        self.mover_init_robot()
+        kl = sorted(self.check_positions.keys())
+        for idx, cp in enumerate(kl):
+            loc = cp
+            pos = self.check_positions[loc]
+
+            print("> Go to check point {} and finding table...".format(loc))
+            self.send_feedback_msg(goal_handle, "move robot to check point "+ loc)
+
+            ret = self.navi_goto_pose_n_check_table(navigator, pos, False)
+            if ret:
+                print('Found the table in front at the {} !'.format(loc))
+                find_fg = True
+            else:
+                print('Arrived at the {}, rotating around to find the table...'.format(loc))
+                if self.find_trash_table():
+                    print('Found the table around of robot!')
+                    find_fg = True
+                else:
+                    print('Not found the table around of robot!')
+                    job_stat = True
+                    continue
+
+            if find_fg:
+                print("Send the goal to 'Approch to trash table action server'!")
+                self.send_feedback_msg(goal_handle, "Find the table and Call AS to approach under the trash table")
+
+                robot_utils.send_goal(search=False)
+                robot_utils.robot_state = "moving-under_table"
+                
+                while robot_utils.robot_state != "trash-table_search_finished":
+                    rclpy.spin_once(robot_utils)
+                    rclpy.spin_once(table_finder)
+
+                print("-- Found trash table and Complete to go under table --")
+                self.send_feedback_msg(goal_handle, "Rotate robot and lift the table")
+
+                if idx == 0:
+                    print("[{}] Rotate 90 degree left for going forward".format(loc))
+                    self.mover_rotate_robot("left", 90)
+                elif idx == 1:
+                    print("[{}] Rotate 90 degree right for going forward".format(loc))
+                    self.mover_rotate_robot("right", 90)
+                elif idx in [2, 3, 5]:
+                    print("[{}] Rotate 180 degree back for going forward".format(loc))
+                    self.mover_rotate_robot("right", 180)
+
+                print("Align to the table leg for lift")
+                if self.mover_align_to_front_leg() == False:
+                    print("-- Fail to align robot to the leg")
+                
+                print("Lift the trash table")
+                self.mover_elevator_up()
+
+                print("Start to publish new footprint for the loaded robot shape")
+                robot_utils.pub_fprint_cnt = 1
+                while robot_utils.pub_fprint_cnt > 0:
+                    rclpy.spin_once(robot_utils)
+                    rclpy.spin_once(table_finder)
+                
+                self.send_feedback_msg(goal_handle, "Publish loaded footprint and go out from the loading position")
+
+                print("Moving forward to get out of loading position...")
+
+                if idx == 0:
+                    robot_utils.rb_move_out(direction='forward', d_rotate='left')
+                elif idx in [1, 2, 3, 4, 5]:
+                    robot_utils.rb_move_out(direction='forward', d_rotate='forward')
+
+                break
+
+        if find_fg:
+            wl = sorted(self.discovery_wp.keys())
+            for widx, wp in enumerate(wl):
+                wloc = wp
+                pos = self.discovery_wp[wloc]
+                if idx < 2 and widx == 0:
+                    continue
+
+                print("Moving forward to the {}...".format(wloc))
+                self.send_feedback_msg(goal_handle, "move robot through waypoint "+ wloc)
+
+                ret = self.navi_goto_pose(navigator, pos)
+                if not ret:
+                    print('Fail to move to the {}...'.format(wloc))
+                else:
+                    if wloc == "put_down_pos":
+                        self.send_feedback_msg(goal_handle, "put down the table and going out from underneath table")
+                        print('Arrived at the {} !'.format(wloc))
+                        print("Drop the trash table")
+                        self.mover_elevator_down()
+
+                        print("Start to publish new footprint for the unloaded robot shape")
+                        robot_utils.pub_fprint_cnt = 1
+                        while robot_utils.pub_fprint_cnt > 0:
+                            rclpy.spin_once(robot_utils)
+                            rclpy.spin_once(table_finder)
+
+                        if self.mover_align_to_front_leg() == False:
+                            print("-- Fail to align robot to the leg")
+
+                        print("Rotate 180 degree back for going out from put down position")
+                        self.mover_rotate_robot("left", 180)
+
+                        print("Align to the table leg for getting out")
+                        if self.mover_align_to_front_leg() == False:
+                            print("-- Fail to align robot to the leg")
+        
+                        print("Moving forwardward to get out of put down position...")
+                        robot_utils.rb_move_out(direction='forward', d_rotate='forward', t=4)
+                        job_stat = True
+                    else:
+                        print('Arrived at the {} !'.format(wloc))
+        else:
+            print("Not found the trash table anywhere")
+
+        if job_stat:
+            self.send_feedback_msg(goal_handle, "Done!! and going back to home position")
+
+            print(">> Going back to home...")
+            ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
+            if ret:
+                print('Arrived at home position !')
+            else:
+                print('Fail to go back home position ...')
+        return job_stat
+
+#---------------------------
 # parser = argparse.ArgumentParser()
 # parser.add_argument('-target', default='sim', help='Please set the Target Env(sim or real)') 
 # parser.add_argument('-robot_name', default='rb1_robot', help='Please set the Target robot name for sim or real') 

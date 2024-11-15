@@ -1,0 +1,9 @@
+<launch>
+
+  <arg name="target" default="real"/>
+  <arg name="robot" default="cleaner_2"/>
+
+  <include file="$(find-pkg-share localization_server)/launch/localization_real.launch.py"/>
+  <include file="$(find-pkg-share path_planner_server)/launch/pathplanner_real.launch.py"/>
+
+</launch>

@@ -90,7 +90,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            # rviz_node,
+            rviz_node,
             base_laser_sensor_link_tf_publisher_node,
             base_laser_sensor_link_tf_publisher_node2,
             cartographer_node,
