@@ -124,17 +124,6 @@ def generate_launch_description():
                     ]
     )
 
-    approach_service_server_node = Node(
-        package='attach_shelf',
-        executable='approach_service_server_node',
-        output='screen',
-        name='approach_service_server_node',
-        parameters=[{
-            'target': run_env_f
-        }]
-
-    )
-
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -147,7 +136,6 @@ def generate_launch_description():
         [
             target_arg,
             # rviz_node,
-            # approach_service_server_node,
             GroupAction(
                 condition=LaunchConfigurationEquals('target', 'real'),
                 actions = [

@@ -1,0 +1,73 @@
+services:
+  gazebo_simulation_docker:
+    image: invokelee/ros2-final-project-base:1.3
+    network_mode: host
+    privileged: true
+    hostname: simulator1
+    environment:    
+      - DISPLAY=${DISPLAY}
+    command:
+      - /simulator1/entrypoint.sh
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/mem:/dev/mem
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./gazebo_simulation_docker/sim_gazebo_ep.sh:/simulator1/entrypoint.sh
+      - real-static:/simulator1/static/
+
+  navigation_docker_sim:
+    image: invokelee/ros2-final-project-base:1.3
+    network_mode: host
+    privileged: true
+    hostname: navi_sim
+    restart: on-failure
+    depends_on:
+      - gazebo_simulation_docker
+    environment:    
+      - DISPLAY=${DISPLAY}
+    command:
+      - /navi_sim/entrypoint.sh
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./navigation_docker/sim_navi_ep.sh:/navi_sim/entrypoint.sh
+
+  trash_table_mgmt_docker_sim:
+    image: invokelee/ros2-final-project-base:1.3
+    network_mode: host
+    privileged: true
+    hostname: table_mgmt_sim
+    restart: on-failure
+    depends_on:
+      - navigation_docker_sim
+    environment:    
+      - DISPLAY=${DISPLAY}
+    command:
+      - /table_mgmt_sim/entrypoint.sh
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./trash_table_mgmt_docker/sim_trash_tb_ep.sh:/table_mgmt_sim/entrypoint.sh
+
+  web_app_docker_sim:
+    image: invokelee/ros2-final-project-base:1.3
+    network_mode: host
+    privileged: true
+    hostname: web_app_sim
+    restart: on-failure
+    depends_on:
+      - navigation_docker_sim
+    environment:    
+      - DISPLAY=${DISPLAY}
+      - SLOT_ROSBRIDGE_PORT=20001
+    command:
+      - /web_app_sim/entrypoint.sh
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./web_app_docker/sim_wep_app_ep.sh:/web_app_sim/entrypoint.sh
+
+volumes:
+  real-static:

@@ -1,0 +1,45 @@
+pipeline {
+    agent any 
+    stages {
+        stage('Login to Docker Hub') {
+            steps {
+                sh '''
+                cat ~/ros2_ws/.my_password.txt | 
+                sudo docker login --username invokelee --password-stdin
+                '''
+            }
+        }
+        stage('Build Docker image') {
+            steps {
+                sh '''
+                cd ~/ros2_ws/src/ros2_ci_docker
+                sudo docker build -f Dockerfile -t invokelee/ros2-wp-test:1.0 /home/user/ros2_ws/src/
+                '''
+            }
+        }
+        stage('Docker compose up and Waypoint test') {
+            steps {
+                sh '''
+                cd ~/ros2_ws/src/ros2_ci_docker
+                sudo docker compose -f docker-compose-ros2_ci.yml up
+                '''
+            }
+        }
+        stage('Post task- Docker compose down') {
+            steps {
+                sh '''
+                sleep 5
+                cd ~/ros2_ws/src/ros2_ci_docker
+                sudo docker compose -f docker-compose-ros2_ci.yml down
+                '''
+            }
+        }
+        stage('Done') {
+            steps {
+                sh '''
+                echo "ROS2 - Docker build and run Pipeline job completed !"
+                '''
+            }
+        }
+    }
+}

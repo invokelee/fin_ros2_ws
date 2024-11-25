@@ -1,0 +1,52 @@
+services:
+  navigation_docker_real:
+    image: invokelee/ros2-final-project-base:1.1
+    network_mode: host
+    privileged: true
+    hostname: navi_real
+    environment:    
+      - DISPLAY=${DISPLAY}
+    command:
+      - /navi_real/entrypoint.sh
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./navigation_docker/real_navi_ep.sh:/navi_real/entrypoint.sh
+
+  trash_table_mgmt_docker_real:
+    image: invokelee/ros2-final-project-base:1.1
+    network_mode: host
+    privileged: true
+    hostname: table_mgmt_real
+    restart: on-failure
+    depends_on:
+      - navigation_docker_real
+    environment:    
+      - DISPLAY=${DISPLAY}
+    command:
+      - /table_mgmt_real/entrypoint.sh
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./trash_table_mgmt_docker/real_trash_tb_ep.sh:/table_mgmt_real/entrypoint.sh
+
+  web_app_docker_real:
+    image: invokelee/ros2-final-project-base:1.1
+    network_mode: host
+    privileged: true
+    hostname: web_app_real
+    restart: on-failure
+    depends_on:
+      - navigation_docker_real
+    environment:    
+      - DISPLAY=${DISPLAY}
+      - SLOT_ROSBRIDGE_PORT=20001
+    command:
+      - /web_app_real/entrypoint.sh
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/shm:/dev/shm
+      - ./web_app_docker/real_wep_app_ep.sh:/web_app_real/entrypoint.sh
+
+volumes:
+  real-static:
