@@ -17,7 +17,6 @@ def generate_launch_description():
     map_file_path  = PathJoinSubstitution([get_package_share_directory('cartographer_slam'), 'config', map_file_f])
     nav2_yaml_real = os.path.join(get_package_share_directory('localization_server'), 'config', 'amcl_config_real.yaml')
     rviz_file_real = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'real_pathplanning.rviz')
-    # rviz_file_real = os.path.join(get_package_share_directory('localization_server'), 'rviz', 'real_localizer_rviz_config.rviz')
 
     real_map_server_node = Node(
         package='nav2_map_server',

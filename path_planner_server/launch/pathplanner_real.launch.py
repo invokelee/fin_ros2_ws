@@ -18,7 +18,6 @@ def generate_launch_description():
     real_bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/bt.yaml')
     real_recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/recovery.yaml')
     real_filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/filters.yaml')
-
     rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'real_pathplanning.rviz')
 
     real_filter_mask_server_node = Node(

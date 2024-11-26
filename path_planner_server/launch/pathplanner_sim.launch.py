@@ -18,7 +18,7 @@ def generate_launch_description():
     sim_bt_navigator_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/bt.yaml')
     sim_recovery_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/recovery.yaml')
     sim_filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/filters.yaml')
-    sim_rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'pathplanning.rviz')
+    sim_rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'sim_pathplanning.rviz')
 
     sim_filter_mask_server_node = Node(
         package='nav2_map_server',
