@@ -40,7 +40,6 @@ COPY ./simulation_ws/src/rb1_ros2               ./rb1_ros2
 COPY ./simulation_ws/src/rosbridge_suite        ./rosbridge_suite
 COPY ./simulation_ws/src/tf2_web_republisher_py ./tf2_web_republisher_py
 COPY ./simulation_ws/src/universal_robot_ros2   ./universal_robot_ros2
-# COPY ./simulation_ws/src/web_tools              ./web_tools
 
 RUN cd /webpage_ws
 WORKDIR /webpage_ws
@@ -51,7 +50,7 @@ RUN source /opt/ros/humble/setup.bash \
  && cd /ros2_ws \
  && colcon build
 
- RUN cd /simulation_ws \
+RUN cd /simulation_ws \
  && rosdep fix-permissions && rosdep update \
  && rosdep install --from-paths src -i -y --rosdistro humble --ignore-src
 
@@ -63,6 +62,4 @@ RUN source /opt/ros/humble/setup.bash \
 RUN echo "source /simulation_ws/install/setup.bash" >> ~/.bashrc
 
 WORKDIR /ros2_ws
-# COPY ./tortoisebot_ros2_docker/tortoisebot-ros2-slam/entrypoint.sh ./
 CMD ["bash"]
-# CMD ["/tortoise_ws/entrypoint.sh"]
