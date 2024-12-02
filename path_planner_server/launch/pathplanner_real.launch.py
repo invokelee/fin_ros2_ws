@@ -6,6 +6,7 @@ from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.substitutions import LaunchConfiguration
 from launch.conditions import LaunchConfigurationEquals
+from nav2_common.launch import RewrittenYaml
 
 def generate_launch_description():
     target_arg = DeclareLaunchArgument(
@@ -20,13 +21,26 @@ def generate_launch_description():
     real_filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/filters.yaml')
     rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'real_pathplanning.rviz')
 
+    mask_yaml_file = os.path.join(get_package_share_directory('map_server'), 'config', 'real_cafe_r2e_keepout_mask.yaml')
+
+    # Make re-written yaml
+    fm_param_substitutions = {
+        'yaml_filename': mask_yaml_file}
+
+    fm_configured_params = RewrittenYaml(
+        source_file=real_filters_yaml,
+        root_key='',
+        param_rewrites=fm_param_substitutions,
+        convert_types=True)
+
     real_filter_mask_server_node = Node(
         package='nav2_map_server',
         executable='map_server',
         name='filter_mask_server',
         output='screen',
         emulate_tty=True,
-        parameters=[real_filters_yaml],
+        # parameters=[real_filters_yaml],
+        parameters=[fm_configured_params],
         remappings=[
             ('/tf', '/cleaner_2/tf'),
             ('/tf_static', '/cleaner_2/tf_static' ),
@@ -41,7 +55,8 @@ def generate_launch_description():
         name='costmap_filter_info_server',
         output='screen',
         emulate_tty=True,
-        parameters=[real_filters_yaml],
+        # parameters=[real_filters_yaml],
+        parameters=[fm_configured_params],
         remappings=[
             ('/tf', '/cleaner_2/tf'),
             ('/tf_static', '/cleaner_2/tf_static' ),
@@ -78,12 +93,25 @@ def generate_launch_description():
         ],
     )
 
+    bt_xml_file = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'real/navigate_w_replanning_and_recovery.xml')
+
+    # Make re-written yaml
+    bt_param_substitutions = {
+        'default_nav_to_pose_bt_xml': bt_xml_file}
+
+    bt_configured_params = RewrittenYaml(
+        source_file=real_bt_navigator_yaml,
+        root_key='',
+        param_rewrites=bt_param_substitutions,
+        convert_types=True)
+
     real_nav2_bt_navigator_node = Node(
         package='nav2_bt_navigator',
         executable='bt_navigator',
         name='bt_navigator',
         output='screen',
-        parameters=[real_bt_navigator_yaml],
+        # parameters=[real_bt_navigator_yaml],
+        parameters=[bt_configured_params],
         remappings=[
             ('/tf', '/cleaner_2/tf'),
             ('/tf_static', '/cleaner_2/tf_static' ),

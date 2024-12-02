@@ -11,6 +11,9 @@ RUN apt update \
  && apt install -y ros-humble-cartographer* \
  && apt install -y ros-humble-navigation2 \
  && apt install -y ros-humble-nav2-bringup \
+ && apt install -y ros-humble-ros2-control \
+ && apt install -y ros-humble-ros2-controllers \
+ && apt install -y ros-humble-gazebo-ros2-control \
  && apt install -y ros-humble-topic-tools 
 
 RUN apt install -y python-is-python3 python3-pip vim net-tools
@@ -40,6 +43,7 @@ COPY ./simulation_ws/src/rb1_ros2               ./rb1_ros2
 COPY ./simulation_ws/src/rosbridge_suite        ./rosbridge_suite
 COPY ./simulation_ws/src/tf2_web_republisher_py ./tf2_web_republisher_py
 COPY ./simulation_ws/src/universal_robot_ros2   ./universal_robot_ros2
+RUN rm -rf ./universal_robot_ros2/gazebo_ros2_control
 
 RUN cd /webpage_ws
 WORKDIR /webpage_ws

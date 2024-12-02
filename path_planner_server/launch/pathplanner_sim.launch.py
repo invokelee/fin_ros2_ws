@@ -6,6 +6,7 @@ from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.substitutions import LaunchConfiguration
 from launch.conditions import LaunchConfigurationEquals
+from nav2_common.launch import RewrittenYaml
 
 def generate_launch_description():
     target_arg = DeclareLaunchArgument(
@@ -20,13 +21,26 @@ def generate_launch_description():
     sim_filters_yaml = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/filters.yaml')
     sim_rviz_file = os.path.join(get_package_share_directory('path_planner_server'), 'rviz', 'sim_pathplanning.rviz')
 
+    mask_yaml_file = os.path.join(get_package_share_directory('map_server'), 'config', 'sim_cafe_r3e_keepout_mask_map.yaml')
+
+    # Make re-written yaml
+    fm_param_substitutions = {
+        'yaml_filename': mask_yaml_file}
+
+    fm_configured_params = RewrittenYaml(
+        source_file=sim_filters_yaml,
+        root_key='',
+        param_rewrites=fm_param_substitutions,
+        convert_types=True)
+
     sim_filter_mask_server_node = Node(
         package='nav2_map_server',
         executable='map_server',
         name='filter_mask_server',
         output='screen',
         emulate_tty=True,
-        parameters=[sim_filters_yaml]
+        # parameters=[sim_filters_yaml]
+        parameters=[fm_configured_params]
     )
 
     sim_costmap_filter_info_server_node = Node(
@@ -35,7 +49,8 @@ def generate_launch_description():
         name='costmap_filter_info_server',
         output='screen',
         emulate_tty=True,
-        parameters=[sim_filters_yaml]
+        # parameters=[sim_filters_yaml]
+        parameters=[fm_configured_params]
     )
 
     sim_nav2_planner_node = Node(
@@ -54,12 +69,25 @@ def generate_launch_description():
         remappings=[('cmd_vel', 'diffbot_base_controller/cmd_vel_unstamped')]
     )
 
+    bt_xml_file = os.path.join(get_package_share_directory('path_planner_server'), 'config', 'sim/navigate_w_replanning_and_recovery.xml')
+
+    # Make re-written yaml
+    bt_param_substitutions = {
+        'default_nav_to_pose_bt_xml': bt_xml_file}
+
+    bt_configured_params = RewrittenYaml(
+        source_file=sim_bt_navigator_yaml,
+        root_key='',
+        param_rewrites=bt_param_substitutions,
+        convert_types=True)
+
     sim_nav2_bt_navigator_node = Node(
         package='nav2_bt_navigator',
         executable='bt_navigator',
         name='bt_navigator',
         output='screen',
-        parameters=[sim_bt_navigator_yaml]
+        # parameters=[sim_bt_navigator_yaml]
+        parameters=[bt_configured_params]
     )
 
     sim_nav2_recoveries_node = Node(
