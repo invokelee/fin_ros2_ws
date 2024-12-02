@@ -4,40 +4,42 @@ pipeline {
         stage('Login to Docker Hub') {
             steps {
                 sh '''
-                cat ~/ros2_ws/.my_password.txt | 
-                sudo docker login --username invokelee --password-stdin
+                cat /home/invokelee/final_project/ros2_ws/src/fin_devops_docker/.my_password.txt | 
+                docker login --username invokelee --password-stdin
                 '''
             }
         }
         stage('Build Docker image') {
             steps {
                 sh '''
-                cd ~/ros2_ws/src/ros2_ci_docker
-                sudo docker build -f Dockerfile -t invokelee/ros2-wp-test:1.0 /home/user/ros2_ws/src/
+                cd /home/invokelee/final_project/ros2_ws/src/fin_devops_docker
+                docker build -f final_base_docker/Dockerfile -t invokelee/ros2-final-project-base:1.5 /home/invokelee/final_project
                 '''
             }
         }
-        stage('Docker compose up and Waypoint test') {
+        stage('Docker compose up and Start up the service') {
             steps {
                 sh '''
-                cd ~/ros2_ws/src/ros2_ci_docker
-                sudo docker compose -f docker-compose-ros2_ci.yml up
-                '''
-            }
-        }
-        stage('Post task- Docker compose down') {
-            steps {
-                sh '''
-                sleep 5
-                cd ~/ros2_ws/src/ros2_ci_docker
-                sudo docker compose -f docker-compose-ros2_ci.yml down
+                DK_SIM_PS=`docker ps | grep "fin_devops_docker-sim_" | awk '{print $1}'`
+                DK_REAL_PS=`docker ps | grep "fin_devops_docker-real_" | awk '{print $1}'`
+                if [ ! -z "$DK_SIM_PS" -a "$DK_SIM_PS" != " " ]; then
+                    echo "Service is running in simulation... Now it will be restarted"
+                    cd /home/invokelee/final_project/ros2_ws/src/fin_devops_docker
+                    docker compose -f sim_final_docker_compose.yml restart
+                elif [ ! -z "$DK_REAL_PS" -a "$DK_REAL_PS" != " " ]; then
+                    echo "Service is running in real robot... Now it will be restarted"
+                    cd /home/invokelee/final_project/ros2_ws/src/fin_devops_docker
+                    docker compose -f real_final_docker_compose.yml restart
+                else
+                    echo "Service is not running... Nothing will happen"
+                fi
                 '''
             }
         }
         stage('Done') {
             steps {
                 sh '''
-                echo "ROS2 - Docker build and run Pipeline job completed !"
+                echo "Final Project(Simulation / Real Robot) - Docker build and compose up Pipeline job completed !"
                 '''
             }
         }

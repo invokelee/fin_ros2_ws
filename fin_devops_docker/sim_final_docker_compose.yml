@@ -1,5 +1,5 @@
 services:
-  gazebo_simulation_docker:
+  sim_gazebo_simulation_docker:
     image: invokelee/ros2-final-project-base:1.4
     network_mode: host
     privileged: true
@@ -17,14 +17,14 @@ services:
       - ./gazebo_simulation_docker/sim_gazebo_ep.sh:/simulator1/entrypoint.sh
       - real-static:/simulator1/static/
 
-  navigation_docker_sim:
+  sim_navigation_docker:
     image: invokelee/ros2-final-project-base:1.4
     network_mode: host
     privileged: true
     hostname: navi_sim
     restart: on-failure
     depends_on:
-      - gazebo_simulation_docker
+      - sim_gazebo_simulation_docker
     environment:    
       - DISPLAY=${DISPLAY}
     command:
@@ -34,14 +34,14 @@ services:
       - /dev/shm:/dev/shm
       - ./navigation_docker/sim_navi_ep.sh:/navi_sim/entrypoint.sh
 
-  trash_table_mgmt_docker_sim:
+  sim_trash_table_mgmt_docker:
     image: invokelee/ros2-final-project-base:1.4
     network_mode: host
     privileged: true
     hostname: table_mgmt_sim
     restart: on-failure
     depends_on:
-      - navigation_docker_sim
+      - sim_navigation_docker
     environment:    
       - DISPLAY=${DISPLAY}
     command:
@@ -51,14 +51,14 @@ services:
       - /dev/shm:/dev/shm
       - ./trash_table_mgmt_docker/sim_trash_tb_ep.sh:/table_mgmt_sim/entrypoint.sh
 
-  web_app_docker_sim:
+  sim_web_app_docker:
     image: invokelee/ros2-final-project-base:1.4
     network_mode: host
     privileged: true
     hostname: web_app_sim
     restart: on-failure
     depends_on:
-      - navigation_docker_sim
+      - sim_navigation_docker
     environment:    
       - DISPLAY=${DISPLAY}
       - SLOT_ROSBRIDGE_PORT=20001
