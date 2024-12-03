@@ -17,6 +17,13 @@ pipeline {
                 '''
             }
         }
+        stage('Push image to Docker Hub Repositories') {
+            steps {
+                sh '''
+                docker push invokelee/ros2-final-project-base:1.5
+                '''
+            }
+        }
         stage('Docker compose up and Start up the service') {
             steps {
                 sh '''
