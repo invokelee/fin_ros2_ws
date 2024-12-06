@@ -108,10 +108,10 @@ class RobotUtilsNode(Node):
                 self.rb_rotate(self.rb_direction, 0.5, 0.0)
 
         if self.pub_fprint_cnt > 0:
-            if self.attached_table_stat == 1:
+            if self.attached_table_stat == 1:       # Loaded table
                 self.loc_fprint_.publish(self.loaded_robot_shape)
                 self.glb_fprint_.publish(self.loaded_robot_shape)
-            elif self.attached_table_stat == 2:
+            elif self.attached_table_stat == 2:     # Unloaded table
                 self.loc_fprint_.publish(self.normal_robot_shape)
                 self.glb_fprint_.publish(self.normal_robot_shape)
             self.pub_fprint_cnt -= 1
@@ -273,6 +273,8 @@ class CleanTrashTableAS(Node):
     def init_variable(self):
         self.requested_cmd = None
         self.navi_state = 'none'
+        self.check_if_table_fg = False
+
         # robot positions for moving
         self.sim_move_positions = {
             "home_position":    [0.0, 0.0, 0.0],
@@ -477,13 +479,14 @@ class CleanTrashTableAS(Node):
                     print('Estimated time of arrival at loading position: ' + '{0:.0f}'.format(
                             Duration.from_msg(feedback.estimated_time_remaining).nanoseconds / 1e9)
                         + ' seconds.')
-                if robot_utils.attached_table_stat != 1 and table_finder.is_table :
-                    print("=%d= Detected table in the way of target position x(%f), y(%f), theta(%f)" 
-                    % (i, m_p[0], m_p[1], m_p[2]))
-                    print("==> Table at %s Distance left((%f), right(%f)" % (table_finder.table_status, table_finder.left_min_value,  table_finder.right_min_value))
-                    if table_finder.left_min_value < 0.7 and table_finder.right_min_value < 0.7:
-                        navigator.cancelTask()
-                    #---------------------------------
+                if self.check_if_table_fg:
+                    if robot_utils.attached_table_stat != 1 and table_finder.is_table :
+                        print("=%d= Detected table in the way of target position x(%f), y(%f), theta(%f)" 
+                        % (i, m_p[0], m_p[1], m_p[2]))
+                        print("==> Table at %s Distance left((%f), right(%f)" % (table_finder.table_status, table_finder.left_min_value,  table_finder.right_min_value))
+                        if table_finder.left_min_value < 0.7 and table_finder.right_min_value < 0.7:
+                            navigator.cancelTask()
+                        #---------------------------------
 
                 rclpy.spin_once(robot_utils)
                 rclpy.spin_once(table_finder)
@@ -726,6 +729,7 @@ class CleanTrashTableAS(Node):
                         self.mover_rotate_robot("right", 140)
 
             elif loc == 'put_down_pos':
+                self.check_if_table_fg = False
                 ret = self.navi_goto_pose(navigator, pos)
                 if not ret:
                     print('Fail to move to the {}...'.format(loc))
@@ -762,6 +766,7 @@ class CleanTrashTableAS(Node):
             else:
                 # self.send_feedback_msg(goal_handle, "move robot to " + loc)
                 print("Moving forward to the {}...".format(loc))
+                self.check_if_table_fg = False
                 ret = self.navi_goto_pose(navigator, pos)
                 if ret:
                     print('Arrived at the {} !'.format(loc))
@@ -770,6 +775,7 @@ class CleanTrashTableAS(Node):
         if job_stat:
             self.send_feedback_msg(goal_handle, "going back to home position")
             print(">> Going back to home...")
+            self.check_if_table_fg = False
             ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
             if ret:
                 print('Arrived at home position !')
@@ -837,6 +843,7 @@ class CleanTrashTableAS(Node):
                         robot_utils.rb_move_out(direction='forward', d_rotate='right')
 
             elif loc == 'put_down_pos':
+                self.check_if_table_fg = False
                 ret = self.navi_goto_pose(navigator, pos)
                 if not ret:
                     print('Fail to move to the {}...'.format(loc))
@@ -867,6 +874,7 @@ class CleanTrashTableAS(Node):
                     job_stat = True
             else:
                 print("Moving forward to the {}...".format(loc))
+                self.check_if_table_fg = False
                 ret = self.navi_goto_pose(navigator, pos)
                 if ret:
                     print('Arrived at the {} !'.format(loc))
@@ -875,6 +883,7 @@ class CleanTrashTableAS(Node):
         if job_stat:
             self.send_feedback_msg(goal_handle, "going back to home position")
             print(">> Going back to home...")
+            self.check_if_table_fg = False
             ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
             if ret:
                 print('Arrived at home position !')
@@ -948,6 +957,7 @@ class CleanTrashTableAS(Node):
         if self.navi_go_through_pose(navigator, self.table2_cor_wp) == False:
             return False
 
+        self.check_if_table_fg = False
         if self.navi_goto_pose(navigator, self.table2_wp["put_down_pos"]):
             self.send_feedback_msg(goal_handle, "put down the table and going out from underneath table")
             print('Arrived at the put_down_pos')
@@ -980,6 +990,7 @@ class CleanTrashTableAS(Node):
         if job_stat:
             self.send_feedback_msg(goal_handle, "going back to home position")
             print(">> Going back to home...")
+            self.check_if_table_fg = False
             ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
             if ret:
                 print('Arrived at home position !')
@@ -1078,7 +1089,7 @@ class CleanTrashTableAS(Node):
 
                 print("Moving forward to the {}...".format(wloc))
                 self.send_feedback_msg(goal_handle, "move robot through waypoint "+ wloc)
-
+                self.check_if_table_fg = True
                 ret = self.navi_goto_pose(navigator, pos)
                 if not ret:
                     print('Fail to move to the {}...'.format(wloc))
@@ -1116,6 +1127,7 @@ class CleanTrashTableAS(Node):
         if job_stat:
             self.send_feedback_msg(goal_handle, "Done!! and going back to home position")
             print(">> Going back to home...")
+            self.check_if_table_fg = False
             ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
             if ret:
                 print('Arrived at home position !')
@@ -1127,6 +1139,7 @@ class CleanTrashTableAS(Node):
         self.send_feedback_msg(goal_handle, "going to home position")
         self.mover_init_robot()
         print(">> Going back to home...")
+        self.check_if_table_fg = False
         ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
         if ret:
             print('Arrived at home position !')
@@ -1254,6 +1267,7 @@ class CleanTrashTableAS(Node):
                         robot_utils.rb_move_out(direction='forward', d_rotate='left', t=8, l_x=0.5)   # default t=5.5, for change (direction='forward', d_rotate='left', t=4)
 
             elif loc == 'put_down_pos':
+                self.check_if_table_fg = False
                 ret = self.navi_goto_pose(navigator, pos)
                 if not ret:
                     print('Fail to move to the {}...'.format(loc))
@@ -1290,6 +1304,7 @@ class CleanTrashTableAS(Node):
             else:
                 # self.send_feedback_msg(goal_handle, "move robot to " + loc)
                 print("Moving forward to the {}...".format(loc))
+                self.check_if_table_fg = False
                 ret = self.navi_goto_pose(navigator, pos)
                 if ret:
                     print('Arrived at the {} !'.format(loc))
@@ -1299,6 +1314,7 @@ class CleanTrashTableAS(Node):
         if job_stat:
             self.send_feedback_msg(goal_handle, "going back to home position")
             print(">> Going back to home...")
+            self.check_if_table_fg = False
             ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
             if ret:
                 print('Arrived at home position !')
@@ -1391,7 +1407,7 @@ class CleanTrashTableAS(Node):
 
                 print("Moving forward to the {}...".format(wloc))
                 self.send_feedback_msg(goal_handle, "move robot through waypoint "+ wloc)
-
+                self.check_if_table_fg = True
                 ret = self.navi_goto_pose(navigator, pos)
                 if not ret:
                     print('Fail to move to the {}...'.format(wloc))
@@ -1430,6 +1446,7 @@ class CleanTrashTableAS(Node):
             self.send_feedback_msg(goal_handle, "Done!! and going back to home position")
 
             print(">> Going back to home...")
+            self.check_if_table_fg = False
             ret = self.navi_goto_pose(navigator, self.move_positions['home_position'])
             if ret:
                 print('Arrived at home position !')
