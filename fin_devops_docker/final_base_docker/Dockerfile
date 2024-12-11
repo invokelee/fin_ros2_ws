@@ -14,6 +14,7 @@ RUN apt update \
  && apt install -y ros-humble-ros2-control \
  && apt install -y ros-humble-ros2-controllers \
  && apt install -y ros-humble-gazebo-ros2-control \
+ && apt install -y ros-humble-xacro \
  && apt install -y ros-humble-topic-tools 
 
 RUN apt install -y python-is-python3 python3-pip vim net-tools
