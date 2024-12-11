@@ -1,0 +1,1 @@
+Trigger build to jenkins job cleaner_robot_cicd_pipeline #1
