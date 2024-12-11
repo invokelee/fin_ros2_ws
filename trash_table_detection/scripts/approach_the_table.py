@@ -80,7 +80,7 @@ class ApproachTable(Node):
         if self.target_env_ == "sim":
             self.RBot = False
             self.ns = ""
-            self.Table_Width = 0.58
+            self.Table_Width = 0.55
         else:
             self.Table_Width = 0.45
  
