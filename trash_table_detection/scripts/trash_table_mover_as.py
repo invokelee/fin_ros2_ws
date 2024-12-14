@@ -251,7 +251,7 @@ class CleanTrashTableAS(Node):
 
             self.cleaner_move_table_1 = self.real_cleaner_move_table_1
             self.cleaner_move_table_2 = None
-            self.discovery_and_cleaner_move = self.sim_discovery_and_cleaner_move
+            self.discovery_and_cleaner_move = self.real_discovery_and_cleaner_move
             print('Target Env is Real robot')
 
         self.set_initial_pose(navigator, self.move_positions['home_position'])
@@ -354,7 +354,7 @@ class CleanTrashTableAS(Node):
 #------------------------- 11/09
         self.real_table_1_wp = {
             # "loading_pos":      [ 0.62,  0.77,  3.14],
-            "loading_pos":      [ 0.62,  0.95,  3.14],
+            "loading_pos":      [ 0.5,  0.77,  3.14],
             "corridor_pos2":    [ 0.73, -0.38,  0.0],
             "corridor_pos1":    [ 3.34,  -0.22,  1.57],
             "put_down_pos":     [ 3.34,  1.0,   1.57],      # dummy pos for testing between corridor_pos1 and cp_03 
@@ -362,9 +362,8 @@ class CleanTrashTableAS(Node):
 
         self.real_check_positions = {
             # "cp_01":             [ 0.62,  0.95,  3.14],   # actual pos
-            "cp_01":             [ 0.62,  0.95,  0.0],      # dummy pos for testing
-            # "cp_02":             [ 2.32,  0.63,  0.0],
-            "cp_02":             [ 2.7,   1.0,  0.0],
+            "cp_01":             [ 0.5,   0.8,   3.14],   # actual pos
+            "cp_02":             [ 2.7,   1.0,   0.0],
             "cp_03":             [ 3.31,  1.76,  1.57],
             "cp_04":             [ 3.84, -1.16, -1.57],
             "cp_05":             [ 2.08, -0.34,  3.14],
@@ -587,16 +586,16 @@ class CleanTrashTableAS(Node):
 
     def find_trash_table(self):
         print("Finding table - rotate right back 60'")
-        self.mover_rotate_robot("right", 60)
+        self.mover_rotate_robot("right", 70)
 
         table_finder.finding_fg = True
         
         time.sleep(1)
         table_finder.is_table = False
         ret = False
-        cnt = 20
+        cnt = 25    # 20 -> 40
         while cnt > 0:
-            robot_utils.rb_rotate("left", 0.3, 0.0)
+            robot_utils.rb_rotate("left", 0.1, 0.0)
             if cnt % 5 == 0:
                 print("Finding table ... {}".format(cnt))
                 table_finder.finding_fg = True
@@ -1203,7 +1202,7 @@ class CleanTrashTableAS(Node):
         job_stat = False
         self.mover_init_robot()
         for loc, pos in self.table1_wp.items():
-            print("> Go to the {}...".format(loc))
+            print("Real> Go to the {}...".format(loc))
             self.send_feedback_msg(goal_handle, "move robot to "+ loc)
             if loc == 'loading_pos':
                 ret = self.navi_goto_pose_n_check_table(navigator, pos)
@@ -1332,7 +1331,7 @@ class CleanTrashTableAS(Node):
             loc = cp
             pos = self.check_positions[loc]
 
-            print("> Go to check point {} and finding table...".format(loc))
+            print("Real> Go to check point {} and finding table...".format(loc))
             self.send_feedback_msg(goal_handle, "move robot to check point "+ loc)
 
             ret = self.navi_goto_pose_n_check_table(navigator, pos, False)
@@ -1374,9 +1373,10 @@ class CleanTrashTableAS(Node):
                     self.mover_rotate_robot("right", 180)
 
                 print("Align to the table leg for lift")
-                if self.mover_align_to_front_leg() == False:
+                if self.mover_align_to_front_leg(center=True) == False:
                     print("-- Fail to align robot to the leg")
-                
+                time.sleep(1)
+
                 print("Lift the trash table")
                 self.mover_elevator_up()
 
@@ -1391,9 +1391,9 @@ class CleanTrashTableAS(Node):
                 print("Moving forward to get out of loading position...")
 
                 if idx == 0:
-                    robot_utils.rb_move_out(direction='forward', d_rotate='left')
+                    robot_utils.rb_move_out(direction='forward', d_rotate='left', t=8, l_x=0.5)
                 elif idx in [1, 2, 3, 4, 5]:
-                    robot_utils.rb_move_out(direction='forward', d_rotate='forward')
+                    robot_utils.rb_move_out(direction='forward', d_rotate='forward', l_x=0.5)
 
                 break
 

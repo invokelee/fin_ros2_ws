@@ -60,7 +60,7 @@ class TrashTableFinder(Node):
         self.MEAN_DIST_FROM_TABLE = 1.0
         self.MIN_DIST_FROM_TABLE = 0.2
         self.MIN_DIST_BODY = 0.20
-        self.CHK_LEG_DIST = 0.35
+        self.CHK_LEG_DIST = 0.35  
         self.CENTER_ERR = 0.05      # 0.05 -> 2.87'
         self.angle_increment = None
         self.left_leg_idx = None
@@ -268,7 +268,7 @@ class TrashTableFinder(Node):
             vel_w = self.angular_controller.update(control_variable)
             if cnt % 5 == 0:
                 print("Aligning to the center of the leg delta({}), Rotate the robot... - w : {}".format(self.front_leg_delta_idx, vel_w))
-            self.rotate(direction=None, w=vel_w, x=0.0)
+            self.rotate(direction=None, w=vel_w*0.8, x=0.0)     # too fast to rotate, so w = vel_w * 0.5
             rclpy.spin_once(self)
             # rate.sleep()
             if abs(self.front_leg_delta_idx) < 3 and 20 < (self.left_leg_idx + self.right_leg_idx):     # sim: 5 * 0.004364 / 3.141592 * 180 = 
