@@ -2,12 +2,9 @@ controller_server:
   ros__parameters:
     use_sim_time: False
     controller_frequency: 5.0
-    min_x_velocity_threshold: 0.01
-    min_y_velocity_threshold: 0.03
-    min_theta_velocity_threshold: 0.01
-    # min_x_velocity_threshold: 0.001
-    # min_y_velocity_threshold: 0.5
-    # min_theta_velocity_threshold: 0.001
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"] 
@@ -31,25 +28,25 @@ controller_server:
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.1
+      max_vel_x: 0.2
       # max_vel_x: 0.26
       max_vel_y: 0.0
       max_vel_theta: 0.2
       # max_vel_theta: 1.0
       min_speed_xy: 0.0
-      max_speed_xy: 0.1
+      max_speed_xy: 0.2
       # max_speed_xy: 0.26
       min_speed_theta: 0.0
-      # acc_lim_x: 2.5
-      acc_lim_x: 0.1
+      # acc_lim_x: 2.5, 0.1
+      acc_lim_x: 0.02
       acc_lim_y: 0.0
-      acc_lim_theta: 0.1
-      # acc_lim_theta: 3.2
-      decel_lim_x: -0.1
-      # decel_lim_x: -2.5
+      acc_lim_theta: 0.02
+      # acc_lim_theta: 3.2, 0.1
+      decel_lim_x: -0.02
+      # decel_lim_x: -2.5, -0.1
       decel_lim_y: 0.0
-      decel_lim_theta: -0.1
-      # decel_lim_theta: -3.2
+      decel_lim_theta: -0.02
+      # decel_lim_theta: -3.2, -0.1
       vx_samples: 20
       vy_samples: 5
       vtheta_samples: 20
